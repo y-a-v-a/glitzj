@@ -30,14 +30,14 @@
 
 ## Phase 4: Strategy engine
 
-- [~] Implement the strategy pipeline: copy the original `Uint8Array`, apply all active strategies in fixed order (Static → Dropout → Echo → Drift → Smear → Crumble), return the mutated buffer — skeleton exists; strategy application is a stub
+- [x] Implement the strategy pipeline: copy the original `Uint8Array`, apply all active strategies in fixed order (Static → Dropout → Echo → Drift → Smear → Crumble), return the mutated buffer
 - [x] Re-run the pipeline whenever intensity, seed, or active strategies change
-- [ ] **Static:** XOR-mask scan bytes with seeded PRNG values; intensity drives mutation density (0–100% of scan bytes)
-- [ ] **Dropout:** zero out 1–5 randomly placed byte runs; intensity drives total zeroed length (0–30% of scan data); run count scales with intensity
-- [ ] **Echo:** locate a source block at a seed-derived offset (fixed length: 2% of scan data); paste it over adjacent ranges; intensity drives repetition count (1–8)
-- [ ] **Drift:** shift a run of scan bytes forward by N positions; intensity drives shift distance (0–5% of scan data length)
-- [ ] **Smear:** add random byte-value offsets to the early scan data region; intensity drives how far into the scan data the corruption reaches (0–25% of scan data length)
-- [ ] **Crumble:** add random byte-value offsets to the late scan data region; intensity drives how far back from the end the corruption reaches (0–25% of scan data length)
+- [x] **Static:** XOR-mask scan bytes with seeded PRNG values; intensity drives mutation density (0–100% of scan bytes)
+- [x] **Dropout:** zero out 1–5 randomly placed byte runs; intensity drives total zeroed length (0–30% of scan data); run count scales with intensity
+- [x] **Echo:** locate a source block at a seed-derived offset (fixed length: 2% of scan data); paste it over adjacent ranges; intensity drives repetition count (1–8)
+- [x] **Drift:** shift a run of scan bytes forward by N positions; intensity drives shift distance (0–5% of scan data length)
+- [x] **Smear:** add random byte-value offsets to the early scan data region; intensity drives how far into the scan data the corruption reaches (0–25% of scan data length)
+- [x] **Crumble:** add random byte-value offsets to the late scan data region; intensity drives how far back from the end the corruption reaches (0–25% of scan data length)
 
 ## Phase 5: Renderability and export
 
