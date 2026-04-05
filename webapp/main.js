@@ -7,6 +7,8 @@ const MAX_DIMENSION  = 4000;             // px
 
 const state = {
   originalBytes: null,
+  scanStart: 0,
+  scanEnd: 0,
   activeStrategies: new Set(),
   intensity: 50,
   seed: 1,
@@ -77,7 +79,16 @@ function loadFile(file) {
         );
       }
 
+      let scanBounds;
+      try {
+        scanBounds = parseJpeg(bytes);
+      } catch (err) {
+        return showError(err.message);
+      }
+
       state.originalBytes = bytes;
+      state.scanStart     = scanBounds.scanStart;
+      state.scanEnd       = scanBounds.scanEnd;
       els.imgBefore.src = URL.createObjectURL(file);
       els.imgBefore.hidden = false;
       els.dropZone.querySelector('.panel__hint').hidden = true;
