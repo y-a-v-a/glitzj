@@ -1,0 +1,276 @@
+/* ─── Custom properties ─────────────────────────────────────────────────── */
+
+:root {
+  --color-bg: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-border: #ddd;
+  --color-text: #111;
+  --color-text-muted: #777;
+  --color-accent: #1a1a1a;
+  --color-accent-fg: #fff;
+  --color-btn-secondary-bg: #e8e8e8;
+  --color-btn-secondary-fg: #111;
+  --color-strategy-active-bg: #111;
+  --color-strategy-active-fg: #fff;
+  --color-broken: #c0392b;
+
+  --radius: 6px;
+  --gap: 1rem;
+  --panel-min-height: 320px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #111;
+    --color-surface: #1e1e1e;
+    --color-border: #333;
+    --color-text: #f0f0f0;
+    --color-text-muted: #888;
+    --color-accent: #f0f0f0;
+    --color-accent-fg: #111;
+    --color-btn-secondary-bg: #2a2a2a;
+    --color-btn-secondary-fg: #f0f0f0;
+    --color-strategy-active-bg: #f0f0f0;
+    --color-strategy-active-fg: #111;
+    --color-broken: #e74c3c;
+  }
+}
+
+/* ─── Reset ─────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── Base ──────────────────────────────────────────────────────────────── */
+
+body {
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────── */
+
+.site-header {
+  padding: 1rem var(--gap);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.site-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+}
+
+/* ─── App layout ────────────────────────────────────────────────────────── */
+
+.app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: var(--gap);
+}
+
+/* ─── Panels ────────────────────────────────────────────────────────────── */
+
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+}
+
+@media (max-width: 768px) {
+  .panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.panel__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.panel__surface {
+  flex: 1;
+  min-height: var(--panel-min-height);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.panel--before .panel__surface {
+  cursor: pointer;
+}
+
+.panel--before .panel__surface:hover {
+  border-color: var(--color-text-muted);
+}
+
+.panel--before .panel__surface.drag-over {
+  border-color: var(--color-accent);
+  border-style: dashed;
+}
+
+.panel__hint {
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.6;
+  pointer-events: none;
+  user-select: none;
+}
+
+.panel__broken {
+  color: var(--color-broken);
+  font-weight: 600;
+}
+
+.panel__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* ─── Controls ──────────────────────────────────────────────────────────── */
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--gap);
+}
+
+.controls__global {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.control-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.control-range {
+  width: 120px;
+  accent-color: var(--color-accent);
+}
+
+.control-input {
+  width: 80px;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.control-value {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  min-width: 2ch;
+}
+
+/* ─── Strategy buttons ──────────────────────────────────────────────────── */
+
+.controls__strategies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ─── Actions ───────────────────────────────────────────────────────────── */
+
+.controls__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.controls__buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ─── Buttons ───────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.1s;
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+}
+
+.btn--secondary {
+  background: var(--color-btn-secondary-bg);
+  color: var(--color-btn-secondary-fg);
+}
+
+.btn--strategy {
+  background: var(--color-btn-secondary-bg);
+  color: var(--color-btn-secondary-fg);
+  border-color: var(--color-border);
+}
+
+.btn--strategy.active {
+  background: var(--color-strategy-active-bg);
+  color: var(--color-strategy-active-fg);
+  border-color: transparent;
+}
