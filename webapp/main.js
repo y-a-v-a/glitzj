@@ -1,3 +1,10 @@
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_DIMENSION  = 4000;             // px
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
 const state = {
   originalBytes: null,
   activeStrategies: new Set(),
@@ -22,6 +29,76 @@ const els = {
   autoRetry:      document.getElementById('auto-retry'),
   strategyBtns:   document.querySelectorAll('.btn--strategy'),
 };
+
+// ── File input ───────────────────────────────────────────────────────────────
+
+els.dropZone.addEventListener('click', () => els.fileInput.click());
+
+els.fileInput.addEventListener('change', () => {
+  if (els.fileInput.files[0]) loadFile(els.fileInput.files[0]);
+});
+
+els.dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  els.dropZone.classList.add('drag-over');
+});
+
+els.dropZone.addEventListener('dragleave', () => {
+  els.dropZone.classList.remove('drag-over');
+});
+
+els.dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  els.dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+});
+
+function loadFile(file) {
+  if (file.type !== 'image/jpeg') {
+    return showError('Only JPEG files are supported.');
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    return showError(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is 10 MB.`);
+  }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const bytes = new Uint8Array(e.target.result);
+
+    const img = new Image();
+    const blobUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(blobUrl);
+      if (img.naturalWidth > MAX_DIMENSION || img.naturalHeight > MAX_DIMENSION) {
+        return showError(
+          `Image too large (${img.naturalWidth}×${img.naturalHeight}px). Maximum is ${MAX_DIMENSION}×${MAX_DIMENSION}px.`
+        );
+      }
+
+      state.originalBytes = bytes;
+      els.imgBefore.src = URL.createObjectURL(file);
+      els.imgBefore.hidden = false;
+      els.dropZone.querySelector('.panel__hint').hidden = true;
+      setAfterState('placeholder');
+      els.btnExport.disabled = true;
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(blobUrl);
+      showError('Could not decode the image. Is it a valid JPEG?');
+    };
+
+    img.src = blobUrl;
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+function showError(message) {
+  alert(message);
+}
 
 // ── Intensity ────────────────────────────────────────────────────────────────
 
