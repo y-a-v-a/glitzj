@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glitzj</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <h1 class="site-title">Glitzj</h1>
+  </header>
+
+  <main class="app">
+    <div class="panels">
+      <div class="panel panel--before">
+        <span class="panel__label">Before</span>
+        <div class="panel__surface" id="drop-zone">
+          <p class="panel__hint">Drop a JPEG here<br>or click to open</p>
+          <img class="panel__image" id="img-before" alt="Original image" hidden>
+          <input type="file" id="file-input" accept="image/jpeg" hidden>
+        </div>
+      </div>
+
+      <div class="panel panel--after">
+        <span class="panel__label">After</span>
+        <div class="panel__surface">
+          <p class="panel__hint" id="after-placeholder">—</p>
+          <p class="panel__broken" id="after-broken" hidden>Image broken</p>
+          <img class="panel__image" id="img-after" alt="Glitched image" hidden>
+        </div>
+      </div>
+    </div>
+
+    <section class="controls" id="controls" aria-label="Glitch controls">
+      <div class="controls__global">
+        <div class="control-group">
+          <label class="control-label" for="intensity">Intensity</label>
+          <input class="control-range" type="range" id="intensity" min="0" max="100" value="50">
+          <span class="control-value" id="intensity-value">50</span>
+        </div>
+        <div class="control-group">
+          <label class="control-label" for="seed">Seed</label>
+          <input class="control-input" type="number" id="seed" value="1" min="0">
+          <button class="btn btn--secondary" id="btn-randomise">Randomise</button>
+        </div>
+      </div>
+
+      <div class="controls__strategies" role="group" aria-label="Glitch strategies">
+        <button class="btn btn--strategy" data-strategy="static">Static</button>
+        <button class="btn btn--strategy" data-strategy="dropout">Dropout</button>
+        <button class="btn btn--strategy" data-strategy="echo">Echo</button>
+        <button class="btn btn--strategy" data-strategy="drift">Drift</button>
+        <button class="btn btn--strategy" data-strategy="smear">Smear</button>
+        <button class="btn btn--strategy" data-strategy="crumble">Crumble</button>
+      </div>
+
+      <div class="controls__actions">
+        <div class="controls__retry">
+          <label class="control-label" for="auto-retry">
+            <input type="checkbox" id="auto-retry">
+            Auto-retry
+          </label>
+        </div>
+        <div class="controls__buttons">
+          <button class="btn btn--secondary" id="btn-reset">Reset</button>
+          <button class="btn btn--primary" id="btn-export" disabled>Export</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="main.js"></script>
+</body>
+</html>
