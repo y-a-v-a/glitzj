@@ -1,0 +1,54 @@
+# Glitzj — Tasks
+
+## Phase 1: Project scaffold
+
+- [ ] Create `index.html` with basic page structure, before/after panel layout, and `<meta name="viewport">` for mobile scaling
+- [ ] Create `style.css` with responsive before/after layout: side-by-side on desktop, stacked on mobile (breakpoint at ~768px)
+- [ ] Implement dark and light mode via `prefers-color-scheme` media query; all colours defined as CSS custom properties
+- [ ] Ensure all interactive controls (buttons, sliders, inputs) have touch-friendly tap targets (minimum 44×44px)
+- [ ] Create `main.js` as the entry point (no build toolchain required for v1)
+
+## Phase 2: JPEG loading and validation
+
+- [ ] Implement file input (click to open + drag-and-drop onto the before panel)
+- [ ] Guard: reject files > 10 MB immediately from the `File` object, before reading
+- [ ] Decode the file into an `<img>` element and guard: reject if width > 4000 or height > 4000
+- [ ] Implement JPEG marker-walk to parse the segment structure
+- [ ] Guard: reject if no SOF0 marker (`0xFFC0`) is found
+- [ ] Guard: scan entropy-coded data between `SOS` and `EOI` for RSTn markers (`0xFFD0`–`0xFFD7`), treating `0xFF00` as byte-stuffing; reject if any are found
+- [ ] Extract and store the byte bounds of the scan data region (start/end offsets into the `Uint8Array`) for use by strategies
+- [ ] Display clear, specific error messages for each rejection condition
+
+## Phase 3: Controls and UI state
+
+- [ ] Render the original image in the before panel after successful load
+- [ ] Intensity slider (0–100) shared across all strategies
+- [ ] Seed number input with a "Randomise" button that picks a new random seed
+- [ ] Six strategy toggle buttons: Static, Dropout, Echo, Drift, Smear, Crumble
+- [ ] Reset button: clears all active strategies and resets intensity/seed, restoring after panel to match before
+- [ ] Export button: initially disabled; enabled only when the after panel shows a renderable result
+
+## Phase 4: Strategy engine
+
+- [ ] Implement the strategy pipeline: copy the original `Uint8Array`, apply all active strategies in fixed order (Static → Dropout → Echo → Drift → Smear → Crumble), return the mutated buffer
+- [ ] Re-run the pipeline whenever intensity, seed, or active strategies change
+- [ ] **Static:** XOR-mask scan bytes with seeded PRNG values; intensity drives mutation density (0–100% of scan bytes)
+- [ ] **Dropout:** zero out 1–5 randomly placed byte runs; intensity drives total zeroed length (0–30% of scan data); run count scales with intensity
+- [ ] **Echo:** locate a source block at a seed-derived offset (fixed length: 2% of scan data); paste it over adjacent ranges; intensity drives repetition count (1–8)
+- [ ] **Drift:** shift a run of scan bytes forward by N positions; intensity drives shift distance (0–5% of scan data length)
+- [ ] **Smear:** add random byte-value offsets to the early scan data region; intensity drives how far into the scan data the corruption reaches (0–25% of scan data length)
+- [ ] **Crumble:** add random byte-value offsets to the late scan data region; intensity drives how far back from the end the corruption reaches (0–25% of scan data length)
+
+## Phase 5: Renderability and export
+
+- [ ] After each pipeline run, attempt to render the mutated buffer as a `Blob` URL in the after `<img>` element
+- [ ] Listen for the `<img>` `error` event to detect unrenderable output; show "image broken" message in the after panel and disable the export button
+- [ ] On successful render, update the after panel and enable the export button
+- [ ] Export: on click, trigger a download of the current mutated `Uint8Array` as a `.jpg` file
+
+## Phase 6: Auto-retry (opt-in)
+
+- [ ] Add an opt-in toggle for auto-retry (off by default)
+- [ ] When enabled and output is unrenderable, increment the seed and re-run the pipeline; repeat up to a configurable maximum number of attempts
+- [ ] If a renderable result is found, update the seed input in the UI to reflect the successful seed
+- [ ] If max attempts are exhausted without a renderable result, show "image broken" as normal

@@ -58,8 +58,8 @@ Zeroes out one or more contiguous byte ranges in the scan data.
 - *Visual character:* solid colour patches and missing blocks.
 
 **Echo**
-Copies a seeded source block and pastes it over adjacent byte ranges repeatedly.
-- *Intensity drives:* number of repetitions (1 at minimum intensity, up to 8 at maximum). Source block length is fixed at 2% of scan data.
+Copies a source block and pastes it over adjacent byte ranges repeatedly. The source block's start offset within the scan data is derived from the seed. Source block length is fixed at 2% of scan data.
+- *Intensity drives:* number of repetitions (1 at minimum intensity, up to 8 at maximum).
 - *Visual character:* banding and repeated horizontal patterns.
 
 **Drift**
