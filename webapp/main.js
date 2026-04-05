@@ -187,7 +187,7 @@ function setAfterState(mode, src) {
   if (mode === 'image' && src) els.imgAfter.src = src;
 }
 
-// ── Strategy pipeline (stub — strategies implemented in later tasks) ──────────
+// ── Strategy pipeline ─────────────────────────────────────────────────────────
 
 function applyStrategies() {
   if (!state.originalBytes) return;
@@ -198,8 +198,7 @@ function applyStrategies() {
   }
 
   const buf = new Uint8Array(state.originalBytes);
-  // strategies will mutate buf here
-
+  runPipeline(buf, state.scanStart, state.scanEnd, state.activeStrategies, state.intensity, state.seed);
   renderResult(buf);
 }
 
