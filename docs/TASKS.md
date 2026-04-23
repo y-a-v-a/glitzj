@@ -14,9 +14,9 @@
 - [x] Guard: reject files > 10 MB immediately from the `File` object, before reading
 - [x] Decode the file into an `<img>` element and guard: reject if width > 4000 or height > 4000
 - [x] Implement JPEG marker-walk to parse the segment structure
-- [x] Guard: reject if no SOF0 marker (`0xFFC0`) is found
-- [x] Guard: scan entropy-coded data between `SOS` and `EOI` for RSTn markers (`0xFFD0`–`0xFFD7`), treating `0xFF00` as byte-stuffing; reject if any are found
-- [x] Extract and store the byte bounds of the scan data region (start/end offsets into the `Uint8Array`) for use by strategies
+- [x] Guard: reject malformed JPEGs that do not contain a valid frame marker (`SOFn`)
+- [x] Walk entropy-coded data across all `SOS` segments, treating `0xFF00` as byte-stuffing and `RSTn` markers (`0xFFD0`–`0xFFD7`) as protected boundaries rather than mutable bytes
+- [x] Extract and store the mutable scan ranges plus total logical scan length for use by strategies
 - [x] Display clear, specific error messages for each rejection condition
 
 ## Phase 3: Controls and UI state

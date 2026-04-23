@@ -10,16 +10,11 @@ The app lets a user load a JPEG image and apply one or more glitch strategies to
 
 JPEG is the primary target format because its compressed scan data is tolerant of byte-level corruption, producing visually interesting artifacts. PNG's per-chunk CRC checksums make most corruption invalid to renderers and is out of scope for now.
 
-**v1 is restricted to baseline sequential JPEGs (SOF0) with no restart markers.** Progressive JPEGs (SOF2) interleave multiple scan passes and have a fundamentally different scan data layout; CMYK JPEGs add a fourth channel that changes byte geometry; restart markers (RSTn, `0xFFD0`–`0xFFD7`) appear inside the entropy-coded scan data and interact unpredictably with byte-shifting strategies.
-
-A baseline SOF0 file can still contain restart markers, so the SOF check alone is not sufficient. Files are rejected at load time if either condition is true:
-
-1. The SOF marker is not SOF0 (i.e. not `0xFFC0`).
-2. Any RSTn marker (`0xFFD0`–`0xFFD7`) is found while scanning the entropy-coded data between the `SOS` and `EOI` markers.
+**v1 operates on any JPEG layout the browser can decode, including baseline sequential JPEGs, progressive JPEGs, and files that use restart markers.** Rather than assuming one contiguous scan between a single `SOS` and `EOI`, the parser walks the full marker structure, gathers every entropy-coded byte range across all scans, and leaves structural markers untouched.
 
 Validation happens in two stages before any strategy processing begins:
-1. Perform a normal marker-walk through the JPEG structure to confirm the file is baseline sequential and to locate the `SOS` and `EOI` bounds.
-2. Scan the bytes inside that scan-data region for restart markers, treating `0xFF00` as byte-stuffing rather than a marker.
+1. Perform a full marker-walk through the JPEG structure to locate a frame marker (`SOFn`) and every entropy-coded scan range.
+2. While scanning entropy data, treat `0xFF00` as byte-stuffing and `RSTn` (`0xFFD0`–`0xFFD7`) as protected restart markers, splitting the mutable ranges around them instead of rejecting the file.
 
 ## Interface
 
@@ -37,7 +32,7 @@ Two shared controls apply to all active strategies:
 
 ## Glitch strategies
 
-Baseline sequential JPEG compresses image data as a single, top-to-bottom sequence of 8×8 pixel blocks of DCT (frequency domain) coefficients. The file stores these blocks in one contiguous scan data region (between the SOS marker and the EOI marker). This layout is what makes the byte-targeting strategies below predictable — progressive or non-standard encodings would break these assumptions. This structure gives corruption a predictable visual character depending on *where* in the scan data it is applied:
+JPEG stores compressed image data in one or more entropy-coded scans. Baseline files usually place this data in one long run; progressive files spread it across multiple passes; restart markers may split a scan into smaller chunks. Glitzj flattens those mutable byte ranges into one logical scan stream so the strategies can still target the "early", "middle", and "late" parts of the compressed data without corrupting the JPEG markers themselves. This gives corruption a predictable visual character depending on *where* in the logical scan data it is applied:
 
 - **Early bytes** → low-frequency data → color smears, tone shifts, large-scale distortion
 - **Late bytes** → high-frequency data → edge/detail destruction, image stays recognisable

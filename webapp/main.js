@@ -7,8 +7,7 @@ const MAX_DIMENSION  = 4000;             // px
 
 const state = {
   originalBytes: null,
-  scanStart: 0,
-  scanEnd: 0,
+  scanInfo: null,
   activeStrategies: new Set(),
   intensity: 50,
   seed: 1,
@@ -87,8 +86,7 @@ function loadFile(file) {
       }
 
       state.originalBytes = bytes;
-      state.scanStart     = scanBounds.scanStart;
-      state.scanEnd       = scanBounds.scanEnd;
+      state.scanInfo      = scanBounds;
       els.imgBefore.src = URL.createObjectURL(file);
       els.imgBefore.hidden = false;
       els.dropZone.querySelector('.panel__hint').hidden = true;
@@ -198,7 +196,7 @@ function applyStrategies() {
   }
 
   const buf = new Uint8Array(state.originalBytes);
-  runPipeline(buf, state.scanStart, state.scanEnd, state.activeStrategies, state.intensity, state.seed);
+  runPipeline(buf, state.scanInfo, state.activeStrategies, state.intensity, state.seed);
   renderResult(buf);
 }
 
@@ -218,6 +216,7 @@ function renderResult(buf, attempt = 0) {
       state.seed += 1;
       els.seed.value = state.seed;
       const retryBuf = new Uint8Array(state.originalBytes);
+      runPipeline(retryBuf, state.scanInfo, state.activeStrategies, state.intensity, state.seed);
       renderResult(retryBuf, attempt + 1);
     } else {
       setAfterState('broken');
