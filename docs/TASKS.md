@@ -52,3 +52,20 @@
 - [x] When enabled and output is unrenderable, increment the seed and re-run the pipeline; repeat up to a configurable maximum number of attempts
 - [x] If a renderable result is found, update the seed input in the UI to reflect the successful seed
 - [x] If max attempts are exhausted without a renderable result, show "image broken" as normal
+
+## Phase 7: Robustness and polish
+
+- [x] Marker protection pass after the pipeline (rewrite fake `0xFF xx` pairs inside scan ranges to `0xFE xx`), on by default with a "Protect markers" toggle
+- [x] Render generation counter so a superseded pipeline result can never overwrite a newer one, including mid auto-retry chain
+- [x] Coalesce bursts of input events into one pipeline run per animation frame
+- [x] Revoke stale blob URLs for both panels; keep exactly one live URL per panel
+- [x] Apply active strategies immediately after a file loads
+- [x] Tolerate JPEGs without an `EOI` marker
+- [x] Sniff file type from magic bytes; specific errors for PNG/GIF/WebP/HEIC/SVG
+- [x] Inline error region (`role="alert"`) instead of `alert()`
+- [x] Drop files anywhere on the page; paste images from the clipboard
+- [x] Keyboard-accessible drop zone, `aria-pressed` on strategy toggles, visible focus rings, `R`/`E` shortcuts
+- [x] Info line: dimensions, size, frame type, scan count; after-panel note when auto-retry changed the seed
+- [x] Settings mirrored in the URL hash and restored on load
+- [x] Reproducible export filename with strategies, intensity and seed
+- [x] Node test suite with synthetic JPEG builder (`npm test`)

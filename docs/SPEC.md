@@ -18,10 +18,14 @@ Validation happens in two stages before any strategy processing begins:
 
 ## Interface
 
-- **Before/after layout:** the original image on the left, the glitched result on the right.
+- **Before/after layout:** the original image on the left, the glitched result on the right. An info line above the original shows dimensions, file size, frame type (baseline/progressive) and scan count.
+- **Loading:** click or press Enter/Space on the before panel to open a file picker, drop a file anywhere on the page, or paste an image from the clipboard. The file type is sniffed from its first bytes, so a mislabeled MIME type does not matter and PNG/GIF/WebP/HEIC/SVG input gets a specific error. Errors appear inline below the panels, never as a blocking dialog.
+- **Live update:** the after panel updates as soon as a file is loaded and on every settings change. Bursts of input (dragging the intensity slider) are coalesced into one pipeline run per animation frame, and a result that belongs to superseded settings is discarded rather than shown.
+- **Shareable settings:** active strategies, intensity, seed and marker protection are mirrored into the URL hash (`#fx=static,smear&i=40&s=3`). Opening that link restores the settings; combined with the same source image it reproduces the exact result.
 - **Broken state:** if the current settings produce a file that cannot be rendered, the "after" panel shows a simple "image broken" message instead of crashing or showing nothing.
 - **Reset button:** reverts all glitch settings, restoring "after" to match "before".
-- **Export button:** saves the glitched JPEG to disk. Disabled whenever the current output is in a broken state — export is only available for renderable results.
+- **Export button:** saves the glitched JPEG to disk as `<original>_glitzj_<strategies>_i<intensity>_s<seed>.jpg`, so the filename alone documents how to reproduce it. Disabled whenever the current output is in a broken state — export is only available for renderable results.
+- **Keyboard:** `R` picks a random seed, `E` exports (when not typing in an input).
 
 ### Controls
 
@@ -76,6 +80,14 @@ Multiple strategies can be active simultaneously. Their effects are applied to t
 
 ## Iteration / validity
 
+### Marker protection
+
+Inside entropy-coded data a `0xFF` byte may only be followed by `0x00` (byte stuffing); any other pair is a marker. Byte-level mutation inevitably creates such pairs, or breaks an existing stuffing pair by changing its `0x00`. Decoders react to a fake marker by leaving the scan early: libjpeg (Chrome, Firefox) pads the rest with zero bits, so everything below that point decodes as flat color. On a test image, Static and Smear left roughly 90% of the block rows flat without protection and 0% with it.
+
+After the pipeline has run, an optional pass rewrites every offending `0xFF` inside the mutable ranges to `0xFE`. Structural markers, restart markers and legitimate stuffing pairs are untouched, and the glitch itself is preserved. This is on by default ("Protect markers"); turning it off restores the raw behavior for those who want the cut-off look.
+
+### Renderability check
+
 The output is always tested for renderability before the export button is enabled. When active strategies produce an unrenderable file, the app can optionally auto-retry with incremented seeds until a renderable result is found (up to a configurable maximum number of attempts). If a retry succeeds, the successful seed replaces the current seed value in the UI and becomes the new reproducible state. This is opt-in and off by default.
 
 ## Technology
@@ -95,5 +107,11 @@ All byte manipulation runs in the browser's main thread, so large inputs will bl
 - **Dimensions ≤ 4000 × 4000 px** — checked after decoding the image into an `<img>` element, before any canvas or byte work begins. Decoded pixel data costs `width × height × 4 bytes` in memory regardless of file size; a compressed 3 MB JPEG at 8000×6000 decodes to ~183 MB.
 
 If either limit is exceeded, the file is rejected with a clear error message stating which limit was hit. No processing is attempted.
+
+A JPEG that ends without an `EOI` marker (a common result of truncated downloads) is accepted, since browsers render such files; the trailing bytes are treated as scan data.
+
+### Tests
+
+`npm test` runs a Node test suite (`test/`) against the parser and strategies using synthetic baseline, restart-marker and progressive JPEGs. It checks range extraction, error cases, determinism, that no strategy ever touches bytes outside the scan ranges, and that marker protection removes every fake marker.
 
 If needed in a later version, larger files can be handled by moving manipulation to a Web Worker, but this is out of scope for now.

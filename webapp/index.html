@@ -14,16 +14,22 @@
   <main class="app">
     <div class="panels">
       <div class="panel panel--before">
-        <span class="panel__label">Before</span>
-        <div class="panel__surface" id="drop-zone">
-          <p class="panel__hint">Drop a JPEG here<br>or click to open</p>
+        <div class="panel__header">
+          <span class="panel__label">Before</span>
+          <span class="panel__meta" id="before-meta"></span>
+        </div>
+        <div class="panel__surface" id="drop-zone" tabindex="0" role="button" aria-label="Open a JPEG file">
+          <p class="panel__hint" id="drop-hint">Drop a JPEG here, paste one,<br>or click to open</p>
           <img class="panel__image" id="img-before" alt="Original image" hidden>
-          <input type="file" id="file-input" accept="image/jpeg" hidden>
+          <input type="file" id="file-input" accept="image/jpeg,.jpg,.jpeg" hidden>
         </div>
       </div>
 
       <div class="panel panel--after">
-        <span class="panel__label">After</span>
+        <div class="panel__header">
+          <span class="panel__label">After</span>
+          <span class="panel__meta" id="after-meta"></span>
+        </div>
         <div class="panel__surface">
           <p class="panel__hint" id="after-placeholder">—</p>
           <p class="panel__broken" id="after-broken" hidden>Image broken</p>
@@ -31,6 +37,8 @@
         </div>
       </div>
     </div>
+
+    <p class="error" id="error" role="alert" hidden></p>
 
     <section class="controls" id="controls" aria-label="Glitch controls">
       <div class="controls__global">
@@ -41,30 +49,34 @@
         </div>
         <div class="control-group">
           <label class="control-label" for="seed">Seed</label>
-          <input class="control-input" type="number" id="seed" value="1" min="0">
-          <button class="btn btn--secondary" id="btn-randomise">Randomise</button>
+          <input class="control-input" type="number" id="seed" value="1" min="0" step="1">
+          <button class="btn btn--secondary" id="btn-randomise" title="Pick a random seed (R)">Randomise</button>
         </div>
       </div>
 
       <div class="controls__strategies" role="group" aria-label="Glitch strategies">
-        <button class="btn btn--strategy" data-strategy="static">Static</button>
-        <button class="btn btn--strategy" data-strategy="dropout">Dropout</button>
-        <button class="btn btn--strategy" data-strategy="echo">Echo</button>
-        <button class="btn btn--strategy" data-strategy="drift">Drift</button>
-        <button class="btn btn--strategy" data-strategy="smear">Smear</button>
-        <button class="btn btn--strategy" data-strategy="crumble">Crumble</button>
+        <button class="btn btn--strategy" data-strategy="static"  aria-pressed="false" title="XOR noise across the whole scan">Static</button>
+        <button class="btn btn--strategy" data-strategy="dropout" aria-pressed="false" title="Zero out contiguous byte runs">Dropout</button>
+        <button class="btn btn--strategy" data-strategy="echo"    aria-pressed="false" title="Repeat one block over its neighbours">Echo</button>
+        <button class="btn btn--strategy" data-strategy="drift"   aria-pressed="false" title="Shift a run of bytes forward">Drift</button>
+        <button class="btn btn--strategy" data-strategy="smear"   aria-pressed="false" title="Corrupt early (low-frequency) data">Smear</button>
+        <button class="btn btn--strategy" data-strategy="crumble" aria-pressed="false" title="Corrupt late (high-frequency) data">Crumble</button>
       </div>
 
       <div class="controls__actions">
-        <div class="controls__retry">
-          <label class="control-label" for="auto-retry">
+        <div class="controls__toggles">
+          <label class="control-toggle" title="Rewrite bytes that would form fake JPEG markers so the result stays decodable">
+            <input type="checkbox" id="protect-markers" checked>
+            Protect markers
+          </label>
+          <label class="control-toggle" title="When the result is broken, try the next seeds automatically">
             <input type="checkbox" id="auto-retry">
             Auto-retry
           </label>
         </div>
         <div class="controls__buttons">
           <button class="btn btn--secondary" id="btn-reset">Reset</button>
-          <button class="btn btn--primary" id="btn-export" disabled>Export</button>
+          <button class="btn btn--primary" id="btn-export" disabled title="Download the glitched JPEG (E)">Export</button>
         </div>
       </div>
     </section>

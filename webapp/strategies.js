@@ -207,3 +207,20 @@ function runPipeline(buf, scanInfo, activeStrategies, intensity, seed) {
     }
   }
 }
+
+// ── Marker protection ─────────────────────────────────────────────────────────
+// Inside entropy-coded data a 0xFF byte must be followed by 0x00 (byte
+// stuffing); anything else is read as a marker and derails the decoder.
+// Mutations can create such pairs, or break an existing stuffing pair by
+// changing its 0x00. Rewriting the offending 0xFF to 0xFE keeps the stream
+// marker-free while leaving the glitch itself intact.
+
+function protectMarkers(buf, scanInfo) {
+  for (const { start, end } of scanInfo.scanRanges) {
+    for (let i = start; i < end; i++) {
+      if (buf[i] === 0xFF && (i + 1 >= end || buf[i + 1] !== 0x00)) {
+        buf[i] = 0xFE;
+      }
+    }
+  }
+}

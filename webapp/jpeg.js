@@ -11,8 +11,12 @@
 //   scanStart,
 //   scanEnd,
 //   scanLength,
+//   scanCount,
 //   scanRanges: [{ start, end }, ...],
 // }
+//
+// A file that ends without an EOI marker is accepted: browsers render such
+// files, so the trailing bytes are treated as scan data.
 //
 // Throws a descriptive Error for malformed input.
 
@@ -83,7 +87,8 @@ function collectEntropyRanges(bytes, scanStart) {
     let j = i + 1;
     while (j < bytes.length && bytes[j] === 0xFF) j++;
     if (j >= bytes.length) {
-      throw new Error('Truncated JPEG scan data.');
+      if (rangeStart < i) scanRanges.push({ start: rangeStart, end: i });
+      return { scanRanges, nextMarkerPos: bytes.length };
     }
 
     const marker = bytes[j];
@@ -102,7 +107,10 @@ function collectEntropyRanges(bytes, scanStart) {
     return { scanRanges, nextMarkerPos: i };
   }
 
-  throw new Error('Could not locate the end of JPEG scan data.');
+  if (rangeStart < bytes.length) {
+    scanRanges.push({ start: rangeStart, end: bytes.length });
+  }
+  return { scanRanges, nextMarkerPos: bytes.length };
 }
 
 function parseJpeg(bytes) {
@@ -112,6 +120,7 @@ function parseJpeg(bytes) {
 
   let i = 2; // skip SOI
   let frameMarker = null;
+  let scanCount = 0;
   const scanRanges = [];
 
   while (i < bytes.length) {
@@ -142,6 +151,7 @@ function parseJpeg(bytes) {
 
     if (marker === 0xDA) {
       i += segLen;
+      scanCount++;
       // One call handles one SOS payload. If the next marker is another SOS,
       // the outer loop will continue and collect the next progressive pass.
       const scan = collectEntropyRanges(bytes, i);
@@ -171,6 +181,7 @@ function parseJpeg(bytes) {
     scanStart: scanRanges[0].start,
     scanEnd: scanRanges[scanRanges.length - 1].end,
     scanLength,
+    scanCount,
     scanRanges,
   };
 }
