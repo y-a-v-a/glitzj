@@ -18,10 +18,10 @@
           <span class="panel__label">Before</span>
           <span class="panel__meta" id="before-meta"></span>
         </div>
-        <div class="panel__surface" id="drop-zone" tabindex="0" role="button" aria-label="Open a JPEG file">
-          <p class="panel__hint" id="drop-hint">Drop a JPEG here, paste one,<br>or click to open</p>
+        <div class="panel__surface" id="drop-zone" tabindex="0" role="button" aria-label="Open a JPEG or PNG file">
+          <p class="panel__hint" id="drop-hint">Drop a JPEG or PNG here, paste one,<br>or click to open</p>
           <img class="panel__image" id="img-before" alt="Original image" hidden>
-          <input type="file" id="file-input" accept="image/jpeg,.jpg,.jpeg" hidden>
+          <input type="file" id="file-input" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden>
         </div>
       </div>
 
@@ -52,22 +52,39 @@
           <input class="control-input" type="number" id="seed" value="1" min="0" step="1">
           <button class="btn btn--secondary" id="btn-randomise" title="Pick a random seed (R)">Randomise</button>
         </div>
+        <div class="control-group" id="png-filter-group" hidden>
+          <label class="control-label" for="png-filter">Filter</label>
+          <select class="control-input control-select" id="png-filter" title="Re-encode the image with one PNG filter before glitching. Damage spreads differently per filter: None keeps it to single pixels, Sub streaks sideways, Up streaks downward, Average smears diagonally, Paeth breaks into blocks">
+            <option value="keep">Original</option>
+            <option value="none">None</option>
+            <option value="sub">Sub</option>
+            <option value="up">Up</option>
+            <option value="average">Average</option>
+            <option value="paeth">Paeth</option>
+          </select>
+        </div>
       </div>
 
       <div class="controls__strategies" role="group" aria-label="Glitch strategies">
-        <button class="btn btn--strategy" data-strategy="static"  aria-pressed="false" title="XOR noise across the whole scan">Static</button>
-        <button class="btn btn--strategy" data-strategy="dropout" aria-pressed="false" title="Zero out contiguous byte runs">Dropout</button>
-        <button class="btn btn--strategy" data-strategy="echo"    aria-pressed="false" title="Repeat one block over its neighbours">Echo</button>
-        <button class="btn btn--strategy" data-strategy="drift"   aria-pressed="false" title="Shift a run of bytes forward">Drift</button>
-        <button class="btn btn--strategy" data-strategy="smear"   aria-pressed="false" title="Corrupt early (low-frequency) data">Smear</button>
-        <button class="btn btn--strategy" data-strategy="crumble" aria-pressed="false" title="Corrupt late (high-frequency) data">Crumble</button>
+        <button class="btn btn--strategy" data-strategy="static"  aria-pressed="false" title="XOR noise across the whole scan" data-title-png="Random bytes; each one streaks across the pixels predicted from it">Static</button>
+        <button class="btn btn--strategy" data-strategy="dropout" aria-pressed="false" title="Zero out contiguous byte runs" data-title-png="Zero out byte runs, so predicted pixels repeat their neighbors">Dropout</button>
+        <button class="btn btn--strategy" data-strategy="echo"    aria-pressed="false" title="Repeat one block over its neighbours" data-title-png="Repeat one block of row data over its neighbors">Echo</button>
+        <button class="btn btn--strategy" data-strategy="drift"   aria-pressed="false" title="Shift a run of bytes forward" data-title-png="Shift a run of row data forward, sliding pixels and color channels">Drift</button>
+        <button class="btn btn--strategy" data-strategy="smear"   aria-pressed="false" title="Corrupt early (low-frequency) data" data-title-png="Damage the first rows; streaks run on from the top">Smear</button>
+        <button class="btn btn--strategy" data-strategy="crumble" aria-pressed="false" title="Corrupt late (high-frequency) data" data-title-png="Damage the last rows, near the bottom of the image">Crumble</button>
+        <button class="btn btn--strategy" data-strategy="prism"   aria-pressed="false" data-format="png" hidden title="Decode random rows with the wrong filter, giving bands of shifted color">Prism</button>
       </div>
 
       <div class="controls__actions">
         <div class="controls__toggles">
-          <label class="control-toggle" title="Rewrite bytes that would form fake JPEG markers so the result stays decodable">
+          <label class="control-toggle" id="protect-toggle" title="Rewrite bytes that would form fake JPEG markers so the result stays decodable"
+            data-title-png="Restore each row's filter type after glitching, so damage stays in the pixel data and the image decodes to the end">
             <input type="checkbox" id="protect-markers" checked>
-            Protect markers
+            <span id="protect-label">Protect markers</span>
+          </label>
+          <label class="control-toggle" id="keep-alpha-toggle" hidden title="Restore the original transparency after glitching, so damage changes colors instead of punching holes">
+            <input type="checkbox" id="keep-alpha" checked>
+            Keep alpha
           </label>
           <label class="control-toggle" title="When the result is broken, try the next seeds automatically">
             <input type="checkbox" id="auto-retry">
@@ -76,13 +93,14 @@
         </div>
         <div class="controls__buttons">
           <button class="btn btn--secondary" id="btn-reset">Reset</button>
-          <button class="btn btn--primary" id="btn-export" disabled title="Download the glitched JPEG (E)">Export</button>
+          <button class="btn btn--primary" id="btn-export" disabled title="Download the glitched image (E)">Export</button>
         </div>
       </div>
     </section>
   </main>
 
   <script src="jpeg.js"></script>
+  <script src="png.js"></script>
   <script src="strategies.js"></script>
   <script src="main.js"></script>
 </body>

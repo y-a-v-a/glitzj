@@ -13,6 +13,7 @@
   --color-strategy-active-bg: #111;
   --color-strategy-active-fg: #fff;
   --color-broken: #c0392b;
+  --color-check: #e4e4e4;
 
   --radius: 6px;
   --gap: 1rem;
@@ -33,6 +34,7 @@
     --color-strategy-active-bg: #f0f0f0;
     --color-strategy-active-fg: #111;
     --color-broken: #e74c3c;
+    --color-check: #2c2c2c;
   }
 }
 
@@ -192,6 +194,11 @@ body {
   display: block;
 }
 
+.panels--png .panel__image {
+  height: auto;
+  background: repeating-conic-gradient(var(--color-check) 0 25%, transparent 0 50%) 0 0 / 16px 16px;
+}
+
 /* ─── Controls ──────────────────────────────────────────────────────────── */
 
 .controls {
@@ -237,6 +244,11 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   font-size: 0.85rem;
+}
+
+.control-select {
+  width: auto;
+  cursor: pointer;
 }
 
 .control-value {
