@@ -3,37 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
   <title>Glitzj</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23101014'/%3E%3Crect x='6' y='8' width='20' height='4' fill='%2300e5ff'/%3E%3Crect x='9' y='14' width='20' height='4' fill='%23ff2e88'/%3E%3Crect x='4' y='20' width='16' height='4' fill='%23f2f2f5'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="site-header">
-    <h1 class="site-title">Glitzj</h1>
+    <div class="brand">
+      <h1 class="site-title" data-text="glitzj">glitzj</h1>
+      <p class="site-tagline">bend the bytes, keep the file</p>
+    </div>
+    <ul class="site-badges" aria-label="About this tool">
+      <li class="badge"><span class="badge__dot" aria-hidden="true"></span>Runs in your browser, nothing is uploaded</li>
+      <li class="badge badge--formats">JPEG · PNG</li>
+    </ul>
   </header>
 
   <main class="app">
     <div class="panels">
       <div class="panel panel--before">
         <div class="panel__header">
-          <span class="panel__label">Before</span>
+          <span class="panel__label"><span class="panel__index" aria-hidden="true">01</span>Before</span>
           <span class="panel__meta" id="before-meta"></span>
         </div>
-        <div class="panel__surface" id="drop-zone" tabindex="0" role="button" aria-label="Open a JPEG or PNG file">
-          <p class="panel__hint" id="drop-hint">Drop a JPEG or PNG here, paste one,<br>or click to open</p>
-          <img class="panel__image" id="img-before" alt="Original image" hidden>
-          <input type="file" id="file-input" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden>
+        <div class="panel__frame">
+          <div class="panel__surface" id="drop-zone" tabindex="0" role="button" aria-label="Open a JPEG or PNG file">
+            <div class="panel__hint panel__hint--drop" id="drop-hint">
+              <svg class="drop-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M24 31V9m0 0-8 8m8-8 8 8" />
+                <path d="M8 29v8a3 3 0 0 0 3 3h26a3 3 0 0 0 3-3v-8" />
+              </svg>
+              <p>Drop a JPEG or PNG here, paste one,<br>or click to open</p>
+              <p class="panel__hint-small">up to 10 MB and 4000 × 4000 px</p>
+            </div>
+            <img class="panel__image" id="img-before" alt="Original image" hidden>
+            <span class="panel__replace" aria-hidden="true">Click or drop to replace</span>
+            <input type="file" id="file-input" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden>
+          </div>
         </div>
       </div>
 
       <div class="panel panel--after">
         <div class="panel__header">
-          <span class="panel__label">After</span>
+          <span class="panel__label">
+            <span class="panel__index" aria-hidden="true">02</span>After
+            <span class="signal" aria-hidden="true"></span>
+          </span>
           <span class="panel__meta" id="after-meta"></span>
         </div>
-        <div class="panel__surface">
-          <p class="panel__hint" id="after-placeholder">—</p>
-          <p class="panel__broken" id="after-broken" hidden>Image broken</p>
-          <img class="panel__image" id="img-after" alt="Glitched image" hidden>
+        <div class="panel__frame">
+          <div class="panel__surface">
+            <div class="panel__hint panel__hint--nosignal" id="after-placeholder">
+              <div class="test-card" aria-hidden="true"></div>
+              <p class="nosignal__box">
+                <span class="nosignal__title">No signal</span>
+                <span class="nosignal__sub nosignal__sub--empty">Open an image to start</span>
+                <span class="nosignal__sub nosignal__sub--idle">Switch on a strategy below</span>
+                <span class="nosignal__sub nosignal__sub--tuning">Tuning in…</span>
+              </p>
+            </div>
+            <p class="panel__broken" id="after-broken" hidden>
+              <span class="broken__box">
+                <span class="panel__broken-title" data-text="Image broken">Image broken</span>
+                <span class="panel__broken-sub">Change the seed, or switch on Auto-retry</span>
+              </span>
+            </p>
+            <img class="panel__image" id="img-after" alt="Glitched image" hidden>
+          </div>
         </div>
       </div>
     </div>
@@ -41,41 +78,72 @@
     <p class="error" id="error" role="alert" hidden></p>
 
     <section class="controls" id="controls" aria-label="Glitch controls">
-      <div class="controls__global">
-        <div class="control-group">
-          <label class="control-label" for="intensity">Intensity</label>
-          <input class="control-range" type="range" id="intensity" min="0" max="100" value="50">
-          <span class="control-value" id="intensity-value">50</span>
-        </div>
-        <div class="control-group">
-          <label class="control-label" for="seed">Seed</label>
-          <input class="control-input" type="number" id="seed" value="1" min="0" step="1">
-          <button class="btn btn--secondary" id="btn-randomise" title="Pick a random seed (R)">Randomise</button>
-        </div>
-        <div class="control-group" id="png-filter-group" hidden>
-          <label class="control-label" for="png-filter">Filter</label>
-          <select class="control-input control-select" id="png-filter" title="Re-encode the image with one PNG filter before glitching. Damage spreads differently per filter: None keeps it to single pixels, Sub streaks sideways, Up streaks downward, Average smears diagonally, Paeth breaks into blocks">
-            <option value="keep">Original</option>
-            <option value="none">None</option>
-            <option value="sub">Sub</option>
-            <option value="up">Up</option>
-            <option value="average">Average</option>
-            <option value="paeth">Paeth</option>
-          </select>
+      <div class="controls__section">
+        <h2 class="controls__heading">Strategies</h2>
+        <div class="controls__strategies" role="group" aria-label="Glitch strategies">
+          <button class="btn btn--strategy" data-strategy="static"  aria-pressed="false" title="XOR noise across the whole scan" data-title-png="Random bytes; each one streaks across the pixels predicted from it">
+            <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h1v1H2zM6 2h1v1H6zM11 3h1v1h-1zM4 6h1v1H4zM9 7h1v1H9zM13 6h1v1h-1zM2 10h1v1H2zM7 11h1v1H7zM12 10h1v1h-1zM4 13h1v1H4zM10 13h1v1h-1z"/></svg>
+            Static
+          </button>
+          <button class="btn btn--strategy" data-strategy="dropout" aria-pressed="false" title="Zero out contiguous byte runs" data-title-png="Zero out byte runs, so predicted pixels repeat their neighbors">
+            <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h12v2H2zM2 6h5v4H2zM2 12h12v2H2z"/><path d="M9 6h5v4H9z" opacity=".35"/></svg>
+            Dropout
+          </button>
+          <button class="btn btn--strategy" data-strategy="echo"    aria-pressed="false" title="Repeat one block over its neighbours" data-title-png="Repeat one block of row data over its neighbors">
+            <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2z"/><path d="M5 5h5v5H5z" opacity=".6"/><path d="M8 8h5v5H8z" opacity=".3"/></svg>
+            Echo
+          </button>
+          <button class="btn btn--strategy" data-strategy="drift"   aria-pressed="false" title="Shift a run of bytes forward" data-title-png="Shift a run of row data forward, sliding pixels and color channels">
+            <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 2h9v2H1zM4 5h11v2H4zM7 8h8v2H7zM1 11h9v2H1z"/></svg>
+            Drift
+          </button>
+          <button class="btn btn--strategy" data-strategy="smear"   aria-pressed="false" title="Corrupt early (low-frequency) data" data-title-png="Damage the first rows; streaks run on from the top">
+            <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h12v3H2z"/><path d="M2 6h12v2H2z" opacity=".65"/><path d="M2 9h12v2H2z" opacity=".4"/><path d="M2 12h12v1H2z" opacity=".2"/></svg>
+            Smear
+          </button>
+          <button class="btn btn--strategy" data-strategy="crumble" aria-pressed="false" title="Corrupt late (high-frequency) data" data-title-png="Damage the last rows, near the bottom of the image">
+            <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h12v6H2z" opacity=".35"/><path d="M2 9h3v2H2zM6 9h2v1H6zM10 10h4v2h-4zM3 12h2v2H3zM7 12h3v1H7zM12 13h2v1h-2z"/></svg>
+            Crumble
+          </button>
+          <button class="btn btn--strategy" data-strategy="prism"   aria-pressed="false" data-format="png" hidden title="Decode random rows with the wrong filter, giving bands of shifted color">
+            <svg class="fx-icon fx-icon--prism" viewBox="0 0 16 16" aria-hidden="true"><path class="fx-c" d="M2 3h12v3H2z"/><path class="fx-m" d="M2 7h12v3H2z"/><path class="fx-y" d="M2 11h12v3H2z"/></svg>
+            Prism
+          </button>
         </div>
       </div>
 
-      <div class="controls__strategies" role="group" aria-label="Glitch strategies">
-        <button class="btn btn--strategy" data-strategy="static"  aria-pressed="false" title="XOR noise across the whole scan" data-title-png="Random bytes; each one streaks across the pixels predicted from it">Static</button>
-        <button class="btn btn--strategy" data-strategy="dropout" aria-pressed="false" title="Zero out contiguous byte runs" data-title-png="Zero out byte runs, so predicted pixels repeat their neighbors">Dropout</button>
-        <button class="btn btn--strategy" data-strategy="echo"    aria-pressed="false" title="Repeat one block over its neighbours" data-title-png="Repeat one block of row data over its neighbors">Echo</button>
-        <button class="btn btn--strategy" data-strategy="drift"   aria-pressed="false" title="Shift a run of bytes forward" data-title-png="Shift a run of row data forward, sliding pixels and color channels">Drift</button>
-        <button class="btn btn--strategy" data-strategy="smear"   aria-pressed="false" title="Corrupt early (low-frequency) data" data-title-png="Damage the first rows; streaks run on from the top">Smear</button>
-        <button class="btn btn--strategy" data-strategy="crumble" aria-pressed="false" title="Corrupt late (high-frequency) data" data-title-png="Damage the last rows, near the bottom of the image">Crumble</button>
-        <button class="btn btn--strategy" data-strategy="prism"   aria-pressed="false" data-format="png" hidden title="Decode random rows with the wrong filter, giving bands of shifted color">Prism</button>
+      <div class="controls__section controls__global">
+        <h2 class="controls__heading">Parameters</h2>
+        <div class="controls__row">
+          <div class="control-group control-group--intensity">
+            <label class="control-label" for="intensity">Intensity</label>
+            <input class="control-range" type="range" id="intensity" min="0" max="100" value="50">
+            <span class="control-value" id="intensity-value">50</span>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="seed">Seed</label>
+            <input class="control-input control-input--seed" type="number" id="seed" value="1" min="0" step="1">
+            <button class="btn btn--secondary" id="btn-randomise" title="Pick a random seed (R)">
+              <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="5" cy="5" r="1.25"/><circle cx="11" cy="11" r="1.25"/><circle cx="8" cy="8" r="1.25"/><circle cx="11" cy="5" r="1.25"/><circle cx="5" cy="11" r="1.25"/></svg>
+              Randomise
+              <kbd class="kbd" aria-hidden="true">R</kbd>
+            </button>
+          </div>
+          <div class="control-group" id="png-filter-group" hidden>
+            <label class="control-label" for="png-filter">Filter</label>
+            <select class="control-input control-select" id="png-filter" title="Re-encode the image with one PNG filter before glitching. Damage spreads differently per filter: None keeps it to single pixels, Sub streaks sideways, Up streaks downward, Average smears diagonally, Paeth breaks into blocks">
+              <option value="keep">Original</option>
+              <option value="none">None</option>
+              <option value="sub">Sub</option>
+              <option value="up">Up</option>
+              <option value="average">Average</option>
+              <option value="paeth">Paeth</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div class="controls__actions">
+      <div class="controls__section controls__actions">
         <div class="controls__toggles">
           <label class="control-toggle" id="as-png-toggle" hidden title="Glitch this JPEG the PNG way: its pixels are re-encoded as a PNG, so the Filter control, Prism and PNG-style streaks apply. Exports a PNG">
             <input type="checkbox" id="as-png">
@@ -96,12 +164,24 @@
           </label>
         </div>
         <div class="controls__buttons">
-          <button class="btn btn--secondary" id="btn-reset">Reset</button>
-          <button class="btn btn--primary" id="btn-export" disabled title="Download the glitched image (E)">Export</button>
+          <button class="btn btn--secondary" id="btn-reset">
+            <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v3h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Reset
+          </button>
+          <button class="btn btn--primary" id="btn-export" disabled title="Download the glitched image (E)">
+            <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="btn-export-label">Export</span>
+            <kbd class="kbd" aria-hidden="true">E</kbd>
+          </button>
         </div>
       </div>
     </section>
   </main>
+
+  <footer class="site-footer">
+    <span>© 2026 Vincent Bruijn</span>
+    <span class="site-footer__keys"><kbd class="kbd">R</kbd> new seed <kbd class="kbd">E</kbd> export <span class="site-footer__sep">·</span> paste an image anywhere</span>
+  </footer>
 
   <script src="jpeg.js"></script>
   <script src="png.js"></script>

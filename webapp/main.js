@@ -69,6 +69,7 @@ const els = {
   btnRandomise:     document.getElementById('btn-randomise'),
   btnReset:         document.getElementById('btn-reset'),
   btnExport:        document.getElementById('btn-export'),
+  btnExportLabel:   document.getElementById('btn-export-label'),
   autoRetry:        document.getElementById('auto-retry'),
   protect:          document.getElementById('protect-markers'),
   protectToggle:    document.getElementById('protect-toggle'),
@@ -211,6 +212,7 @@ function loadFile(file) {
       els.imgBefore.src    = blobUrl;
       els.imgBefore.hidden = false;
       els.dropHint.hidden  = true;
+      els.panels.style.setProperty('--ar', img.naturalWidth / img.naturalHeight);
       els.beforeMeta.textContent = describeImage(img, file);
 
       syncFormatUi();
@@ -366,9 +368,14 @@ function readHash() {
   state.asPng     = p.get('png') === '1';
 }
 
+function syncIntensity() {
+  els.intensity.style.setProperty('--fill', `${state.intensity}%`);
+  els.intensityValue.textContent = state.intensity;
+}
+
 function syncControls() {
   els.intensity.value            = state.intensity;
-  els.intensityValue.textContent = state.intensity;
+  syncIntensity();
   els.seed.value                 = state.seed;
   els.pngFilter.value            = state.pngFilter;
   els.protect.checked            = state.protect;
@@ -386,7 +393,7 @@ function syncControls() {
 
 els.intensity.addEventListener('input', () => {
   state.intensity = Number(els.intensity.value);
-  els.intensityValue.textContent = state.intensity;
+  syncIntensity();
   scheduleApply();
 });
 
@@ -536,8 +543,8 @@ function schedulePack(result) {
 
 function setExporting(on) {
   state.exporting = on;
-  els.btnExport.textContent = on ? 'Exporting…' : 'Export';
-  els.btnExport.disabled    = on || els.imgAfter.hidden;
+  els.btnExportLabel.textContent = on ? 'Exporting…' : 'Export';
+  els.btnExport.disabled         = on || els.imgAfter.hidden;
 }
 
 // Exports the result on screen, which may still belong to the previous file
