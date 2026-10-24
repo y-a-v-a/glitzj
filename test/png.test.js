@@ -658,3 +658,42 @@ test('optimized unfilter matches a literal transcription of the spec for every p
     }
   }
 });
+
+// ── Pixels as PNG ─────────────────────────────────────────────────────────────
+
+test('pngSourceFromPixels turns RGBA pixels into an RGB source with adaptive filters', async () => {
+  const width = 50, height = 30;
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  for (let k = 0; k < width * height; k++) {
+    const x = k % width, y = Math.floor(k / width);
+    rgba.set([x * 5, y * 8, (x * y) & 0xFF, 255], k * 4);
+  }
+  const source = await pngSourceFromPixels(width, height, rgba);
+  const { png, layout, raw } = source;
+  assert.equal(png.colorType, 2);
+  assert.equal(png.bitsPerPixel, 24);
+  assert.equal(hasAlphaChannel(png), false);
+  assert.deepEqual(readChunks(Uint8Array.from([...SIGNATURE, ...png.head])).map(c => c.type), ['IHDR']);
+
+  const recon = unfilterPng(raw, layout);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const o = layout.filterPositions[y] + 1 + x * 3, i = (y * width + x) * 4;
+      assert.deepEqual([...recon.subarray(o, o + 3)], [rgba[i], rgba[i + 1], rgba[i + 2]], `pixel ${x},${y}`);
+    }
+  }
+  assert.deepEqual(sourceRecon(source), recon);
+  assert.ok(layout.filterPositions.some(pos => raw[pos] !== 0), 'a gradient should pick filters other than None');
+
+  const out = encodePng(png, glitchPng(source, settings({ strategies: new Set(['static', 'prism']), seed: 2 })));
+  const parsed = parsePng(out);
+  assert.equal(parsed.width, width);
+  assert.equal(parsed.height, height);
+  assert.equal(inflateIdat(out).length, layout.rawLength);
+});
+
+test('pngSourceFromPixels returns null once cancelled', async () => {
+  const width = 2000, height = 400;
+  const rgba = new Uint8ClampedArray(width * height * 4).map((_, k) => (k * 2654435761) >>> 24);
+  assert.equal(await pngSourceFromPixels(width, height, rgba, () => true), null);
+});

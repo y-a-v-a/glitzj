@@ -690,8 +690,47 @@ async function loadPngSource(bytes, { maxRawBytes = Infinity } = {}) {
     layout.scanRanges   = [{ start: 0, end: layout.scanLength }];
   }
 
+  return makeSource(png, layout, raw);
+}
+
+function makeSource(png, layout, raw) {
   const original = makeBase('keep', raw, layout);
   return { png, layout, raw, recon: null, original, base: original };
+}
+
+// Builds a source from decoded RGBA pixels (a JPEG drawn to a canvas), so any
+// image the browser can show can be glitched the PNG way. The pixels become
+// an 8-bit RGB image; it has no filters of its own, so its "original" filters
+// are the per-row choice libpng-style encoders make. Returns null if
+// cancelled before it finished.
+async function pngSourceFromPixels(width, height, rgba, cancelled = () => false) {
+  const ihdr = new Uint8Array(25);
+  writeChunk(ihdr, 0, 'IHDR', Uint8Array.from([
+    width >>> 24, width >>> 16, width >>> 8, width,
+    height >>> 24, height >>> 16, height >>> 8, height,
+    8, 2, 0, 0, 0,
+  ]));
+  const png = {
+    width, height, bitDepth: 8, colorType: 2, colorName: PNG_COLOR_NAMES[2], interlaced: false,
+    channels: 3, bitsPerPixel: 24, head: ihdr, tail: new Uint8Array(0), animated: false,
+  };
+  const layout = layoutPng(png);
+
+  const unfiltered = new Uint8Array(layout.rawLength);
+  for (let y = 0; y < height; y++) {
+    let o = layout.filterPositions[y] + 1;
+    for (let i = y * width * 4, end = i + width * 4; i < end; i += 4) {
+      unfiltered[o++] = rgba[i];
+      unfiltered[o++] = rgba[i + 1];
+      unfiltered[o++] = rgba[i + 2];
+    }
+  }
+
+  const raw = await optimizeFilters(unfiltered, layout, cancelled);
+  if (!raw) return null;
+  const source = makeSource(png, layout, raw);
+  source.recon = unfiltered;
+  return source;
 }
 
 function sourceRecon(source) {

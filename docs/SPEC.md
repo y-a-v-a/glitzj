@@ -39,6 +39,10 @@ Shown only while a PNG is loaded:
 - **Filter** — Original, None, Sub, Up, Average or Paeth: the PNG filter the image is re-encoded with before glitching (see [Why filters matter](#why-filters-matter)).
 - **Prism** strategy button, and **Keep alpha** for images with an alpha channel. The protection toggle reads "Protect filters" instead of "Protect markers".
 
+Shown only while a JPEG is loaded:
+
+- **Glitch as PNG** — glitches the JPEG through the PNG pipeline instead (see [JPEG as PNG](#jpeg-as-png)). Mirrored in the hash as `png=1`; it stays set when a PNG is loaded, for the next JPEG.
+
 ## Glitch strategies
 
 The strategies below are described in JPEG terms. How they behave on PNG data, and the PNG-only Prism strategy, are covered under [PNG](#png).
@@ -121,6 +125,12 @@ Damaged alpha bytes punch holes, and because filters predict each row from the o
 
 The preview file is uncompressed and can be many times larger than the source. Export instead re-picks each row's filter, keeping whichever of the row as it stands and the five filters applied to the decoded row has the lowest libpng-style score (sum of filtered bytes read as signed values), and compresses with `CompressionStream`. Decoded pixels are identical to the preview; rows from an invalid filter byte on are left alone. Scoring six candidates per row takes seconds at the size limit, so this work yields to the page every 12 ms. The compressed file is prepared in the background once a result has been on screen for 400 ms, so a click usually downloads at once; a job for a result that has since been replaced is cancelled unless an export is waiting for it. Results above 16 MB of raw data are compressed on click instead, with the button showing "Exporting…". The export name and data belong to the result on screen, taken when that output was built. If compression fails, the uncompressed encoding of the same result is downloaded instead.
 
+### JPEG as PNG
+
+With "Glitch as PNG" on, a loaded JPEG is drawn to a canvas as the browser shows it (orientation applied, colors in the canvas color space) and its pixels become an 8-bit RGB PNG source in memory. From there everything in this section applies unchanged, and export produces a PNG named `….png`. A JPEG has no PNG filters of its own, so "Original" means the per-row filter choice libpng-style encoders make (the same scoring as export). The JPEG's scan data stays loaded, so switching the toggle off returns to the JPEG pipeline at once; the PNG source is built on first use and cached per file. Until it is ready, the after panel shows "converting to PNG…" rather than a result for the other format; on test images this took about 0.4 s at 2000 × 1500 and 1.7 s at 4000 × 3000, with the page responsive throughout. A conversion for a file that has since been replaced is discarded.
+
+The exported PNG carries no metadata from the JPEG. Browsers may decode the same JPEG to slightly different pixels, so a `png=1` link reproduces exactly only in the browser that made it.
+
 ## Iteration / validity
 
 ### Marker protection
@@ -163,6 +173,6 @@ A JPEG that ends without an `EOI` marker (a common result of truncated downloads
 `npm test` runs a Node test suite (`test/`) against the parsers and strategies.
 
 - JPEG (`glitzj.test.js`), with synthetic baseline, restart-marker and progressive JPEGs: range extraction, error cases, determinism, that no strategy ever touches bytes outside the scan ranges, that marker protection removes every fake marker, and a digest of fixed-settings output that pins JPEG results so changes made for other formats cannot alter them.
-- PNG (`png.test.js`), with synthetic PNGs built by Node's own `zlib` for every color type and bit depth, interlaced or not: chunk handling and error cases, the row layout (Adam7 checked against a brute-force pass assignment), inflate limits, hand-computed filter rows, the optimized filter kernels against a literal transcription of the spec for every pixel size, lossless re-filtering, filter protection, Prism, alpha restore, density scaling, sparse sampling, cut-off files, cancellation of export work, that every strategy changes even a small image at low intensity, and that every strategy yields a PNG whose CRCs and zlib stream verify.
+- PNG (`png.test.js`), with synthetic PNGs built by Node's own `zlib` for every color type and bit depth, interlaced or not: chunk handling and error cases, the row layout (Adam7 checked against a brute-force pass assignment), inflate limits, hand-computed filter rows, the optimized filter kernels against a literal transcription of the spec for every pixel size, lossless re-filtering, filter protection, Prism, alpha restore, density scaling, sparse sampling, cut-off files, cancellation of export work, building a source from RGBA pixels, that every strategy changes even a small image at low intensity, and that every strategy yields a PNG whose CRCs and zlib stream verify.
 
 If needed in a later version, larger files can be handled by moving manipulation to a Web Worker, but this is out of scope for now.

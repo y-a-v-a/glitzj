@@ -91,3 +91,11 @@
 - [x] Format-aware UI: info line, tooltips, PNG-only controls, checkerboard behind transparent images, PNG settings in the URL hash and export name
 - [x] Ignore stale loads when files are opened in quick succession; export the result on screen with its own name and data
 - [x] Node test suite for PNG with synthetic files built by Node's `zlib`
+
+## Phase 9: Glitch JPEG as PNG
+
+- [x] "Glitch as PNG" toggle for JPEG files, mirrored in the hash as `png=1`
+- [x] Draw the JPEG to a canvas and build an RGB PNG source from its pixels, with libpng-style per-row filters as its "original" filters
+- [x] Keep the JPEG scan data so the toggle switches back at once; cache the PNG source per file
+- [x] Show "converting to PNG…" until the source is ready; discard conversions for replaced files
+- [x] Export the converted result as PNG

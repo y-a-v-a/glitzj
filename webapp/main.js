@@ -36,6 +36,7 @@ const state = {
   autoRetry: false,
   protect: true,
   keepAlpha: true,
+  asPng: false,
 };
 
 // Incremented on every settings change; async decode results carrying an
@@ -74,6 +75,8 @@ const els = {
   protectLabel:     document.getElementById('protect-label'),
   keepAlpha:        document.getElementById('keep-alpha'),
   keepAlphaToggle:  document.getElementById('keep-alpha-toggle'),
+  asPng:            document.getElementById('as-png'),
+  asPngToggle:      document.getElementById('as-png-toggle'),
   strategyBtns:     document.querySelectorAll('.btn--strategy'),
 };
 
@@ -131,8 +134,14 @@ function sniffImageType(b) {
   return null;
 }
 
-async function decodeSource(kind, bytes) {
-  if (kind === 'jpeg') return { scanInfo: parseJpeg(bytes) };
+// A JPEG keeps its scan data even when glitched as PNG, so switching back is
+// instant; the PNG source is only built while that mode is on.
+async function decodeSource(kind, bytes, img) {
+  if (kind === 'jpeg') {
+    const scanInfo  = parseJpeg(bytes);
+    const pngSource = state.asPng ? await convertJpegToPng(img) : null;
+    return { scanInfo, pngSource };
+  }
 
   if (typeof DecompressionStream === 'undefined') {
     throw new Error('This browser cannot decompress PNG data. Try a recent Chrome, Firefox or Safari.');
@@ -180,7 +189,7 @@ function loadFile(file) {
 
       let decoded;
       try {
-        decoded = await decodeSource(kind, bytes);
+        decoded = await decodeSource(kind, bytes, img);
       } catch (err) {
         URL.revokeObjectURL(blobUrl);
         if (gen === loadGen) showError(err.message);
@@ -220,6 +229,23 @@ function loadFile(file) {
     if (gen === loadGen) showError('Could not read the file.');
   };
   reader.readAsArrayBuffer(file);
+}
+
+// Draws the JPEG as the browser shows it (orientation applied, colors in the
+// canvas color space) and turns the pixels into a PNG source. Returns null if
+// another file is opened before it finishes.
+async function convertJpegToPng(img) {
+  const gen = loadGen;
+  await img.decode();
+  const width  = img.naturalWidth;
+  const height = img.naturalHeight;
+  const canvas = document.createElement('canvas');
+  canvas.width  = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0);
+  const { data } = ctx.getImageData(0, 0, width, height);
+  return pngSourceFromPixels(width, height, data, () => gen !== loadGen);
 }
 
 function formatBytes(n) {
@@ -262,8 +288,19 @@ function hideError() {
 els.strategyBtns.forEach(btn => { btn.dataset.titleJpeg = btn.title; });
 els.protectToggle.dataset.titleJpeg = els.protectToggle.title;
 
+// The format the pipeline produces: the file's own, except that a JPEG can be
+// glitched as PNG. Null while its pixels are still being converted.
+function outputFormat() {
+  if (state.format === 'jpeg' && state.asPng) return state.pngSource ? 'png' : null;
+  return state.format;
+}
+
+function isPngMode() {
+  return state.format === 'png' || (state.format === 'jpeg' && state.asPng);
+}
+
 function isAvailable(name) {
-  return FORMATS[state.format || 'png'].strategies.includes(name);
+  return FORMATS[outputFormat() || 'png'].strategies.includes(name);
 }
 
 function effectiveStrategies() {
@@ -271,7 +308,7 @@ function effectiveStrategies() {
 }
 
 function syncFormatUi() {
-  const png = state.format === 'png';
+  const png = isPngMode();
   const titleKey = png ? 'titlePng' : 'titleJpeg';
 
   els.strategyBtns.forEach(btn => {
@@ -281,7 +318,8 @@ function syncFormatUi() {
 
   els.panels.classList.toggle('panels--png', png);
   els.pngFilterGroup.hidden    = !png;
-  els.keepAlphaToggle.hidden   = !(png && hasAlphaChannel(state.pngSource.png));
+  els.keepAlphaToggle.hidden   = !(png && state.pngSource && hasAlphaChannel(state.pngSource.png));
+  els.asPngToggle.hidden       = state.format !== 'jpeg';
   els.protectLabel.textContent = png ? 'Protect filters' : 'Protect markers';
   els.protectToggle.title      = els.protectToggle.dataset[titleKey];
 }
@@ -299,6 +337,7 @@ function writeHash() {
   if (state.pngFilter !== DEFAULT_FILTER) p.set('f', state.pngFilter);
   if (!state.protect) p.set('raw', '1');
   if (!state.keepAlpha) p.set('alpha', '0');
+  if (state.asPng) p.set('png', '1');
   const hash = p.toString();
   try {
     history.replaceState(null, '', hash ? `#${hash}` : location.pathname + location.search);
@@ -324,6 +363,7 @@ function readHash() {
 
   state.protect   = p.get('raw') !== '1';
   state.keepAlpha = p.get('alpha') !== '0';
+  state.asPng     = p.get('png') === '1';
 }
 
 function syncControls() {
@@ -333,6 +373,7 @@ function syncControls() {
   els.pngFilter.value            = state.pngFilter;
   els.protect.checked            = state.protect;
   els.keepAlpha.checked          = state.keepAlpha;
+  els.asPng.checked              = state.asPng;
   els.autoRetry.checked          = state.autoRetry;
   els.strategyBtns.forEach(btn => {
     const on = state.activeStrategies.has(btn.dataset.strategy);
@@ -417,18 +458,37 @@ els.keepAlpha.addEventListener('change', () => {
   scheduleApply();
 });
 
+els.asPng.addEventListener('change', async () => {
+  state.asPng = els.asPng.checked;
+  syncFormatUi();
+  applyStrategies();
+  if (!state.asPng || state.format !== 'jpeg' || state.pngSource) return;
+
+  const gen = loadGen;
+  let source = null;
+  try {
+    source = await convertJpegToPng(els.imgBefore);
+  } catch (err) {
+    if (gen === loadGen) showError(`Could not convert the JPEG: ${err.message}`);
+  }
+  if (gen !== loadGen || !source) return;
+  state.pngSource = source;
+  syncFormatUi();
+  applyStrategies();
+});
+
 // ── Export ────────────────────────────────────────────────────────────────────
 
 // Called when an output is built, with the seed it was built with, so the
 // name always describes the result it travels with.
 function exportName(seed) {
-  const png    = state.format === 'png';
+  const png    = outputFormat() === 'png';
   const base   = (state.fileName || 'image').replace(/\.[^.]+$/, '');
   const fx     = STRATEGY_ORDER.filter(n => effectiveStrategies().has(n)).join('-');
   const filter = png && state.pngFilter !== DEFAULT_FILTER ? `_${state.pngFilter}` : '';
   const raw    = state.protect ? '' : '_raw';
   const alpha  = png && !state.keepAlpha && hasAlphaChannel(state.pngSource.png) ? '_noalpha' : '';
-  return `${base}_glitzj_${fx}_i${state.intensity}_s${seed}${filter}${raw}${alpha}.${FORMATS[state.format].ext}`;
+  return `${base}_glitzj_${fx}_i${state.intensity}_s${seed}${filter}${raw}${alpha}.${FORMATS[outputFormat()].ext}`;
 }
 
 function download(href, name) {
@@ -566,6 +626,11 @@ function applyStrategies() {
 
   if (!state.originalBytes) return;
 
+  if (!outputFormat()) {
+    showAfter('placeholder', null, 'converting to PNG…');
+    return;
+  }
+
   if (effectiveStrategies().size === 0) {
     showAfter('placeholder');
     return;
@@ -579,7 +644,7 @@ function applyStrategies() {
 function buildOutput(seed) {
   const strategies = effectiveStrategies();
 
-  if (state.format === 'png') {
+  if (outputFormat() === 'png') {
     const raw = glitchPng(state.pngSource, {
       strategies,
       intensity: state.intensity,
@@ -600,7 +665,7 @@ function buildOutput(seed) {
 function renderAttempt(gen, seed, attempt) {
   const { bytes, raw, source } = buildOutput(seed);
   const name  = exportName(seed);
-  const url   = URL.createObjectURL(new Blob([bytes], { type: FORMATS[state.format].mime }));
+  const url   = URL.createObjectURL(new Blob([bytes], { type: FORMATS[outputFormat()].mime }));
   const probe = new Image();
 
   probe.onload = () => {

@@ -42,6 +42,10 @@ PNG predicts every byte from its neighbors, and the way it does so decides how d
 
 **Original** keeps whatever filters the file came with.
 
+### Glitch a JPEG as PNG
+
+Prefer the PNG look for a photo? With a JPEG loaded, switch on **Glitch as PNG**. Glitzj takes the picture as your browser shows it, turns it into a PNG in memory and glitches that, so the Filter control, Prism and the PNG-style streaks all apply. The export is then a PNG, which is larger than the JPEG it came from, and it carries no camera metadata. Switch it off to return to the JPEG glitch.
+
 ## Keeping results viewable
 
 Damaged bytes can accidentally form control codes that make a decoder give up partway, leaving the lower part of the image flat gray. **Protect markers**, on by default, quietly repairs those codes so the whole glitch survives. Turn it off if you want the cut-off look. **Auto-retry** steps through seeds until one renders whenever a result breaks.

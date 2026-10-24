@@ -77,6 +77,10 @@
 
       <div class="controls__actions">
         <div class="controls__toggles">
+          <label class="control-toggle" id="as-png-toggle" hidden title="Glitch this JPEG the PNG way: its pixels are re-encoded as a PNG, so the Filter control, Prism and PNG-style streaks apply. Exports a PNG">
+            <input type="checkbox" id="as-png">
+            Glitch as PNG
+          </label>
           <label class="control-toggle" id="protect-toggle" title="Rewrite bytes that would form fake JPEG markers so the result stays decodable"
             data-title-png="Restore each row's filter type after glitching, so damage stays in the pixel data and the image decodes to the end">
             <input type="checkbox" id="protect-markers" checked>
