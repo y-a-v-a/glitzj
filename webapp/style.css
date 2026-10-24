@@ -1149,7 +1149,6 @@ body::before {
   gap: 0.4rem;
 }
 
-.site-footer__keys .kbd + .kbd,
 .site-footer__keys .kbd:not(:first-child) {
   margin-left: 0.6rem;
 }
