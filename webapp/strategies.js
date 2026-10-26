@@ -77,13 +77,43 @@ function mutateScanBytes(buf, scanInfo, logicalStart, length, visit) {
   });
 }
 
+// Formats where one damaged byte spreads far (PNG) set scanInfo.densityScale
+// below 1 to thin out the strategies that otherwise touch every byte. Those
+// formats take the sparse path below; JPEG keeps drawing one random number per
+// byte, so its results for a given seed never change.
+function densityScale(scanInfo) {
+  return scanInfo.densityScale ?? 1;
+}
+
+// Visits about a share `density` of a logical range: a fixed number of hits,
+// at least one, at seeded random positions. Callers change every visited byte
+// by a nonzero amount, so each hit counts. Rolling for every byte would be
+// wasted work at the tiny densities PNG uses, and only integer-exact
+// arithmetic is involved, so a seed gives the same positions in every browser.
+function forEachSparse(scanInfo, logicalStart, length, density, rand, visit) {
+  if (density <= 0 || length <= 0) return;
+  const hits = Math.max(1, Math.round(length * density));
+  for (let k = 0; k < hits; k++) {
+    const at = logicalStart + Math.floor(rand() * length);
+    forEachLogicalChunk(scanInfo, at, 1, start => visit(start));
+  }
+}
+
 // ── Strategy: Static ──────────────────────────────────────────────────────────
 // XOR-masks scan bytes with seeded pseudo-random values.
-// Intensity drives mutation density: 0 = nothing touched, 100 = every byte.
+// Intensity drives mutation density: 0 = nothing touched, 100 = every byte
+// (times the density scale for PNG, see png.js).
 
 function applyStatic(buf, scanInfo, intensity, seed) {
   const rand    = makePrng(seed);
-  const density = intensity / 100;
+  const density = (intensity / 100) * densityScale(scanInfo);
+
+  if (densityScale(scanInfo) < 1) {
+    forEachSparse(scanInfo, 0, scanInfo.scanLength, density, rand, i => {
+      buf[i] ^= 1 + Math.floor(rand() * 255);
+    });
+    return;
+  }
 
   for (const range of scanInfo.scanRanges) {
     for (let i = range.start; i < range.end; i++) {
@@ -163,29 +193,39 @@ function applyDrift(buf, scanInfo, intensity, seed) {
 }
 
 // ── Strategy: Smear ───────────────────────────────────────────────────────────
-// Adds random byte-value offsets to the early scan data (low-frequency DCT).
-// Intensity drives how far into the scan data the corruption reaches (0–25%).
+// Adds random byte-value offsets to the early scan data (low-frequency DCT;
+// the top rows for PNG). Intensity drives how far into the scan data the
+// corruption reaches (0–25%).
 
 function applySmear(buf, scanInfo, intensity, seed) {
   const rand    = makePrng(seed);
   const scanLen = scanInfo.scanLength;
   const reach   = Math.floor(scanLen * (intensity / 100) * 0.25);
-  mutateScanBytes(buf, scanInfo, 0, reach, i => {
-    buf[i] = (buf[i] + Math.floor(rand() * 256)) & 0xFF;
-  });
+  const offset  = i => { buf[i] = (buf[i] + Math.floor(rand() * 256)) & 0xFF; };
+
+  if (densityScale(scanInfo) < 1) {
+    forEachSparse(scanInfo, 0, reach, densityScale(scanInfo), rand, i => { buf[i] = (buf[i] + 1 + Math.floor(rand() * 255)) & 0xFF; });
+  } else {
+    mutateScanBytes(buf, scanInfo, 0, reach, offset);
+  }
 }
 
 // ── Strategy: Crumble ─────────────────────────────────────────────────────────
-// Adds random byte-value offsets to the late scan data (high-frequency DCT).
-// Intensity drives how far back from the end the corruption reaches (0–25%).
+// Adds random byte-value offsets to the late scan data (high-frequency DCT;
+// the bottom rows for PNG). Intensity drives how far back from the end the
+// corruption reaches (0–25%).
 
 function applyCrumble(buf, scanInfo, intensity, seed) {
   const rand    = makePrng(seed);
   const scanLen = scanInfo.scanLength;
   const reach   = Math.floor(scanLen * (intensity / 100) * 0.25);
-  mutateScanBytes(buf, scanInfo, scanLen - reach, reach, i => {
-    buf[i] = (buf[i] + Math.floor(rand() * 256)) & 0xFF;
-  });
+  const offset  = i => { buf[i] = (buf[i] + Math.floor(rand() * 256)) & 0xFF; };
+
+  if (densityScale(scanInfo) < 1) {
+    forEachSparse(scanInfo, scanLen - reach, reach, densityScale(scanInfo), rand, i => { buf[i] = (buf[i] + 1 + Math.floor(rand() * 255)) & 0xFF; });
+  } else {
+    mutateScanBytes(buf, scanInfo, scanLen - reach, reach, offset);
+  }
 }
 
 // ── Pipeline ──────────────────────────────────────────────────────────────────

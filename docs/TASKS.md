@@ -69,3 +69,33 @@
 - [x] Settings mirrored in the URL hash and restored on load
 - [x] Reproducible export filename with strategies, intensity and seed
 - [x] Node test suite with synthetic JPEG builder (`npm test`)
+
+## Phase 8: PNG support
+
+- [x] PNG chunk walk: signature, IHDR first, consecutive IDAT, specific errors; tolerate a missing IEND or a file cut off inside IDAT
+- [x] Keep ancillary chunks that stay valid when pixels change; drop unsafe-to-copy chunks (`iDOT`, APNG animation chunks)
+- [x] Row layout for every color type and bit depth, including Adam7 interlacing
+- [x] Inflate IDAT once at load with `DecompressionStream`, capped at the size the header promises
+- [x] Guard: reject PNGs whose decompressed image data exceeds 64 MB, before inflating
+- [x] Unfilter and re-filter rows (None, Sub, Up, Average, Paeth) with per-type loops
+- [x] Run the existing strategies on the raw stream, with per-filter density weights for Static, Smear and Crumble and sparse sampling on the PNG path; JPEG output unchanged (pinned by a digest test)
+- [x] Filter protection: restore every row's filter byte after the strategies, on by default ("Protect filters")
+- [x] Prism strategy (PNG only): swap the filter type of 0–10% of rows
+- [x] Filter control: re-encode the base image with one filter before glitching
+- [x] Keep alpha: restore the original transparency after glitching, on by default
+- [x] Encode previews as stored deflate blocks written straight into one IDAT chunk, with fresh Adler-32 and CRCs (slice-by-8)
+- [x] Export: re-pick filters per row and compress with `CompressionStream`, prepared in the background in time slices; superseded jobs cancelled
+- [x] Sparse strategies and Prism make a fixed number of hits (at least one) with integer-exact arithmetic, so shared links reproduce across browsers
+- [x] Cut-off PNGs: strategies and density skip rows that never inflated
+- [x] Export name marks protection off (`_raw`) and alpha off (`_noalpha`)
+- [x] Format-aware UI: info line, tooltips, PNG-only controls, checkerboard behind transparent images, PNG settings in the URL hash and export name
+- [x] Ignore stale loads when files are opened in quick succession; export the result on screen with its own name and data
+- [x] Node test suite for PNG with synthetic files built by Node's `zlib`
+
+## Phase 9: Glitch JPEG as PNG
+
+- [x] "Glitch as PNG" toggle for JPEG files, mirrored in the hash as `png=1`
+- [x] Draw the JPEG to a canvas and build an RGB PNG source from its pixels, with libpng-style per-row filters as its "original" filters
+- [x] Keep the JPEG scan data so the toggle switches back at once; cache the PNG source per file
+- [x] Show "converting to PNG…" until the source is ready; discard conversions for replaced files
+- [x] Export the converted result as PNG

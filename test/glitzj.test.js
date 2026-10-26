@@ -271,3 +271,28 @@ test('protectMarkers is idempotent on an untouched file', () => {
   protectMarkers(buf, info);
   assert.deepEqual(buf, bytes);
 });
+
+// ── Reproducibility ───────────────────────────────────────────────────────────
+// Shared links and export filenames promise that the same image, settings and
+// seed give the same bytes. This digest pins that promise for JPEG, so a change
+// meant for another format cannot silently alter existing results.
+
+test('JPEG output for fixed settings matches the recorded digest', () => {
+  const crypto = require('node:crypto');
+  const hash = crypto.createHash('sha256');
+  for (const fixture of Object.values(FIXTURES)) {
+    const info = parseJpeg(fixture.bytes);
+    for (const name of STRATEGIES) {
+      for (const [intensity, seed] of [[13, 1], [50, 777], [100, 42]]) {
+        const buf = new Uint8Array(fixture.bytes);
+        runPipeline(buf, info, new Set([name]), intensity, seed);
+        protectMarkers(buf, info);
+        hash.update(buf);
+      }
+    }
+    const all = new Uint8Array(fixture.bytes);
+    runPipeline(all, info, new Set(STRATEGIES), 64, 4242);
+    hash.update(all);
+  }
+  assert.equal(hash.digest('hex'), '19fd68fffa750c68d1e7202f678e84e3463d4458c42812852eb7ffc5a4113df7');
+});
