@@ -2,6 +2,10 @@
 
 A glitch tool for JPEG and PNG images that runs entirely in your browser. Nothing is uploaded; your photos never leave your machine.
 
+**Try it at [y-a-v-a.github.io/glitzj](https://y-a-v-a.github.io/glitzj/).**
+
+![Glitzj with a portrait photo on the left and its glitched version on the right, using the Static strategy and the Paeth filter](docs/screenshot.png)
+
 ## What it does
 
 A glitch is bent data: an image whose bytes have been deliberately damaged, yet still open in any viewer. JPEG suits this well. Its compressed picture data tolerates corruption and answers with color smears, torn rows, repeated bands and scattered noise. Glitzj damages only that picture data and leaves the file's structure intact, so every export is a real JPEG that opens anywhere.
@@ -59,6 +63,8 @@ JPEG and PNG, up to 10 MB and 4000 × 4000 pixels; for PNG the unpacked picture 
 ## Running it
 
 There is nothing to install or build. Serve the folder that contains index.html with any static web server and open it in a modern browser.
+
+Every push to `main` runs the tests and publishes the `webapp` folder to GitHub Pages.
 
 ---
 
