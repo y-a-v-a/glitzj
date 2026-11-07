@@ -75,6 +75,20 @@ For PNG the same toggle reads **Protect filters**: it keeps each row's filter in
 
 For GIF the toggle reads **Protect codes**. Viewers react very differently to damaged LZW data. In testing, Chrome stopped drawing at the first code it could not use and left the rest transparent; Firefox showed nothing at all for such a still image, while still reporting it as loaded; the macOS image decoder carried on. Protect codes replaces every code a viewer would give up on, makes every frame exactly as long as it should be, and keeps palette indices inside the palette. Chrome, Firefox and the macOS decoder then showed identical pixels in every test. Without it, the panel says how many frames viewers will cut off, since Firefox gives no sign of it.
 
+## GIF dither
+
+The second page, **GIF dither** (`gif.html`), does not glitch. It redraws any image your browser can open as a GIF with a small palette and lets you shape the dithering: the pattern of dots that fakes the colors the palette lacks.
+
+- **Method**: error diffusion (Floyd–Steinberg, Atkinson, Jarvis–Judice–Ninke, Stucki, Burkes, Sierra, Sierra Lite) passes each pixel's rounding error on to its neighbors, giving a grainy, organic pattern. Ordered dither (Bayer 2 × 2, 4 × 4, 8 × 8) gives a regular crosshatch. Noise adds random jitter; change the seed to reroll it. Off maps every pixel to its nearest color, giving flat bands.
+- **Strength** scales how much error or pattern is added. At 0 every method looks like Off.
+- **Serpentine** runs every other row right to left, which breaks up the diagonal lines error diffusion can leave.
+- **Colors from**: the image itself (a median-cut palette of 2 to 256 colors), grayscale or duotone with 2 to 256 levels, the 216 web-safe colors, or the 8 RGB primaries. Duotone dithers in gray and then paints the levels from your dark color to your light color. The − and + buttons beside the slider step one color at a time.
+- **Dot size** makes every dot cover 1 to 16 pixels of the original in each direction. A GIF stores no DPI, only a width and height in pixels, so fewer pixels per inch means fewer pixels: at dot size 4 a 1600 px wide photo is dithered at 400 px and every dot shows as a 4 × 4 block.
+- **Brightness** and **Contrast** are applied before dithering, so they change the dot pattern itself, not just the colors.
+- **1:1** above the result shows it without scaling it down, so you see the dots as they are.
+
+**Export at original size**, on by default, saves the GIF at the size of the original with each dot drawn as a block of pixels. Switch it off to save one pixel per dot. Pixels that are less than half opaque become transparent; GIF has no partial transparency. An animated GIF is dithered as a still of its first frame. Settings are mirrored in the page address here too.
+
 ## Limits
 
 JPEG, PNG and GIF, up to 10 MB and 4000 × 4000 pixels; for PNG the unpacked picture data may be at most 64 MB, which a 16-bit 4000 × 4000 image exceeds, and a GIF's frames may add up to at most 200 million pixels. Animated PNGs are glitched as a still of their first frame; animated GIFs keep all their frames. Very large files would freeze the page.

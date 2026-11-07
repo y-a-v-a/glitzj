@@ -186,6 +186,26 @@ Prism rotates the red, green and blue values of randomly picked palette entries 
 
 Every frame is glitched. With Steady off, frame *k* uses the seed mixed with *k*, so the damage differs per frame and jumps around as the animation plays. With Steady on, every frame uses the same seed, so the strategies pick the same relative positions in each frame's codes; on a panning test animation, Drift then kept a stable band while Smear still varied. Animations that only redraw the parts of a frame that change keep earlier damage on screen until something draws over it.
 
+## GIF dither page
+
+`gif.html` is a second mode that does not glitch: it renders any image the browser can decode as a single-frame GIF89a with a small palette and gives control over the dithering. It shares `style.css` with the glitch page (plus `gif.css`), and its logic lives in `dither.js` (pure, no DOM, tested in Node) and `gif-page.js` (the page).
+
+### Pipeline
+
+The image is drawn to a canvas once at load. Every settings change then runs, coalesced to one run per animation frame:
+
+1. **Shrink** by the dot size: every dot × dot block of the original becomes one pixel, its color averaged weighted by alpha.
+2. **Tone**: contrast and brightness (−100 to 100); for grayscale and duotone palettes, colors become their luminance (Rec. 601 weights) first.
+3. **Palette**: median cut over a 5-bit-per-channel histogram (2–256 colors), a gray ramp (2–256 levels), the 216-color web-safe cube or the 8 RGB primaries. Duotone dithers against a gray ramp and swaps in a ramp from the dark to the light color when writing the table.
+4. **Dither** to palette indices: error diffusion (Floyd–Steinberg, Atkinson, Jarvis–Judice–Ninke, Stucki, Burkes, Sierra, Sierra Lite; optional serpentine scanning), ordered (Bayer 2 × 2, 4 × 4, 8 × 8) or seeded noise, scaled by strength. Ordered and noise dither push each pixel by up to the palette's step size: the mean distance from each color to its nearest neighbor on the channel where they differ most.
+5. **Encode** as GIF89a with a global color table padded to a power of two, and LZW codes that clear when the dictionary is full.
+
+Pixels below half opacity get their own index, marked transparent in a graphic control extension; they neither take nor pass on dither error. Export writes the dot-sized GIF, or with "Export at original size" the indices enlarged back to the original dimensions.
+
+### Determinism
+
+The same image and settings give the same bytes. Only noise dither uses the seed. Settings are mirrored in the hash (`#dither=atkinson&palette=duotone&colors=2&dot=4`), leaving out values that equal the defaults.
+
 ## Iteration / validity
 
 ### Marker protection
@@ -232,6 +252,8 @@ A JPEG that ends without an `EOI` marker (a common result of truncated downloads
 
 - JPEG (`glitzj.test.js`), with synthetic baseline, restart-marker and progressive JPEGs: range extraction, error cases, determinism, that no strategy ever touches bytes outside the scan ranges, that marker protection removes every fake marker, and a digest of fixed-settings output that pins JPEG results so changes made for other formats cannot alter them.
 - PNG (`png.test.js`), with synthetic PNGs built by Node's own `zlib` for every color type and bit depth, interlaced or not: chunk handling and error cases, the row layout (Adam7 checked against a brute-force pass assignment), inflate limits, hand-computed filter rows, the optimized filter kernels against a literal transcription of the spec for every pixel size, lossless re-filtering, filter protection, Prism, alpha restore, density scaling, sparse sampling, cut-off files, cancellation of export work, building a source from RGBA pixels, that every strategy changes even a small image at low intensity, and that every strategy yields a PNG whose CRCs and zlib stream verify.
+
+- GIF dither (`dither.test.js`), with an LZW decoder written independently of `dither.js`: round trips of the GIF writer at several palette sizes, dictionary clears, the end code at every image length, every method and palette keeping indices inside the palette, determinism and the seed, dot size and enlarging, the share of white dots on mid gray, strength 0, duotone colors, transparency, median cut, palette spread, Bayer matrices and the nearest-color search. In Chrome, its decoder gave the same pixels as this independent decoder for every setting tested.
 
 - GIF (`gif.test.js`), with synthetic GIFs from an LZW encoder and checked by a reference decoder, both written independently of the app (the decoder gave the same pixels as Chrome, Firefox and ImageIO on every file they decoded in full): block walk and error cases, cut-off files and frames of zero size, minimum code size 1, bit-exact repair of undamaged codes (with and without clear codes when the dictionary fills), replacement of bad codes, the wrap-around of short frames, trimming, palette wraparound, that starting over stays fast on codes that are nearly all clear codes, that raw mode's cut-off count matches the reference decoder, that 12-bit codes survive Echo and Drift, Prism's pixel counts, picks and color rules, that every frame decodes in full with every index inside its palette under random settings, that everything outside the image data stays the same, determinism, Steady, and the pixel limit.
 

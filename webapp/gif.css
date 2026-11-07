@@ -1,0 +1,116 @@
+/* ─── GIF dither page ───────────────────────────────────────────────────── */
+
+.panel__image--dots {
+  image-rendering: pixelated;
+  animation: none;
+}
+
+.panel__zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.panel__zoom:has(input:checked) {
+  border-color: var(--channel);
+  color: var(--color-text);
+}
+
+.panel__zoom input {
+  accent-color: var(--channel);
+  margin: 0;
+}
+
+.panel--after .panel__meta {
+  flex: 1;
+}
+
+.panel__surface--zoom {
+  overflow: auto;
+  justify-content: safe center;
+  align-items: safe center;
+}
+
+.panel__surface--zoom .panel__image {
+  flex-shrink: 0;
+  max-width: none;
+}
+
+.control-group--wide .control-value {
+  min-width: 4ch;
+}
+
+.control-group--colors {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.control-group--colors .control-range {
+  flex: 1;
+  width: auto;
+  min-width: 120px;
+}
+
+.btn--step {
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.control-color {
+  width: 44px;
+  height: 44px;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  cursor: pointer;
+}
+
+.control-color:hover {
+  border-color: var(--color-border-strong);
+}
+
+.control-color:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
+.control-toggle:has(input:disabled) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (min-width: 1180px) {
+  .controls--dither {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .controls--dither .controls__section + .controls__section {
+    border-top: none;
+    border-left: 1px dashed var(--color-border);
+  }
+
+  .controls--dither .controls__actions {
+    grid-column: 1 / -1;
+    border-top: 1px dashed var(--color-border);
+    border-left: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .control-group--wide {
+    width: 100%;
+  }
+}

@@ -113,3 +113,13 @@
 - [x] Format-aware UI: info line, tooltips, "Protect codes", checkerboard, Prism, GIF export
 - [x] Node test suite for GIF with an independent LZW encoder and reference decoder
 - [x] Verify repaired output renders identically in Chrome, Firefox and ImageIO
+
+## Phase 11: GIF dither page
+
+- [x] Separate page `gif.html` that renders an image as a dithered GIF instead of glitching it; nav between the two pages
+- [x] Pure module `dither.js`: shrink by dot size (alpha-weighted block average), brightness and contrast, palettes (median cut, grayscale, duotone, web-safe, RGB), dithering (seven error-diffusion kernels with serpentine scanning, Bayer 2/4/8, seeded noise, off), strength
+- [x] GIF89a writer with its own LZW encoder; end code written at the width decoders read it with
+- [x] Transparency: pixels below half opacity get a reserved index in a graphic control extension
+- [x] Nearest-color search sorted by red with early exit, cached per 6-bit cell
+- [x] Settings mirrored in the hash; renders coalesced per animation frame; 1:1 view; export at dot or original size
+- [x] Node tests with an independent LZW decoder; Chrome's decoder matched it pixel for pixel on every tested setting
