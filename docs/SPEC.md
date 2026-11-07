@@ -6,9 +6,9 @@ The glitch making app
 
 A glitch in an image is a visual representation of data deformation without totally breaking the image's data signature. In other words, a glitch is bended data — an erroneous derivative of the original, but one whose data is still understood by common image rendering engines (the browser, OS image previews, etc.).
 
-The app lets a user load a JPEG or PNG image and apply one or more glitch strategies to it in a controlled way. Only renderable results can be exported — the output is always a valid file of the same format.
+The app lets a user load a JPEG, PNG or GIF image and apply one or more glitch strategies to it in a controlled way. Only renderable results can be exported — the output is always a valid file of the same format.
 
-JPEG was the first target format because its compressed scan data is tolerant of byte-level corruption, producing visually interesting artifacts. PNG guards its pixel data with a zlib stream and per-chunk CRC checksums, so damaging the file in place only produces broken images. Glitzj therefore glitches PNG one level down, in the decompressed scanline data, and re-encodes the result (see [PNG](#png)).
+JPEG was the first target format because its compressed scan data is tolerant of byte-level corruption, producing visually interesting artifacts. PNG guards its pixel data with a zlib stream and per-chunk CRC checksums, so damaging the file in place only produces broken images. Glitzj therefore glitches PNG one level down, in the decompressed scanline data, and re-encodes the result (see [PNG](#png)). GIF has no checksums, but its LZW codes are packed across byte boundaries and only mean something relative to the dictionary built before them, so Glitzj glitches GIF at the level of whole codes and packs them again (see [GIF](#gif)).
 
 **v1 operates on any JPEG layout the browser can decode, including baseline sequential JPEGs, progressive JPEGs, and files that use restart markers.** Rather than assuming one contiguous scan between a single `SOS` and `EOI`, the parser walks the full marker structure, gathers every entropy-coded byte range across all scans, and leaves structural markers untouched.
 
@@ -18,13 +18,13 @@ Validation happens in two stages before any strategy processing begins:
 
 ## Interface
 
-- **Before/after layout:** the original image on the left, the glitched result on the right. An info line above the original shows dimensions and file size, then for JPEG the frame type (baseline/progressive) and scan count, and for PNG the color type, bit depth, interlacing and whether animation frames were dropped. PNG panels show a checkerboard behind the image so transparency is visible.
-- **Loading:** click or press Enter/Space on the before panel to open a file picker, drop a file anywhere on the page, or paste an image from the clipboard (screenshots paste as PNG). The file type is sniffed from its first bytes, so a mislabeled MIME type does not matter and GIF/WebP/HEIC/SVG input gets a specific error. Errors appear inline below the panels, never as a blocking dialog. When files are opened in quick succession, only the last one is loaded.
+- **Before/after layout:** the original image on the left, the glitched result on the right. An info line above the original shows dimensions and file size, then for JPEG the frame type (baseline/progressive) and scan count, for PNG the color type, bit depth, interlacing and whether animation frames were dropped, and for GIF the version, frame count, palette size (or the number of color tables) and interlacing. PNG and GIF panels show a checkerboard behind the image so transparency is visible; animated GIFs play in both panels.
+- **Loading:** click or press Enter/Space on the before panel to open a file picker, drop a file anywhere on the page, or paste an image from the clipboard (screenshots paste as PNG). The file type is sniffed from its first bytes, so a mislabeled MIME type does not matter and WebP/HEIC/SVG input gets a specific error. Errors appear inline below the panels, never as a blocking dialog. When files are opened in quick succession, only the last one is loaded.
 - **Live update:** the after panel updates as soon as a file is loaded and on every settings change. Bursts of input (dragging the intensity slider) are coalesced into one pipeline run per animation frame, and a result that belongs to superseded settings is discarded rather than shown.
-- **Shareable settings:** active strategies, intensity, seed, protection, and for PNG the filter and alpha setting are mirrored into the URL hash (`#fx=static,prism&i=40&s=3&f=paeth`). Opening that link restores the settings; combined with the same source image it reproduces the exact result. Strategies the loaded format cannot use stay in the hash but are ignored.
+- **Shareable settings:** active strategies, intensity, seed, protection, for PNG the filter and alpha setting, and for GIF the Steady setting are mirrored into the URL hash (`#fx=static,prism&i=40&s=3&f=paeth`, `steady=1`). Opening that link restores the settings; combined with the same source image it reproduces the exact result. Strategies the loaded format cannot use stay in the hash but are ignored.
 - **Broken state:** if the current settings produce a file that cannot be rendered, the "after" panel shows a simple "image broken" message instead of crashing or showing nothing.
 - **Reset button:** reverts all glitch settings (strategies, intensity, seed and PNG filter), restoring "after" to match "before".
-- **Export button:** saves the glitched image to disk as `<original>_glitzj_<strategies>_i<intensity>_s<seed>.jpg`, or `…_s<seed>[_<filter>].png` for PNG, with `_raw` appended when protection is off and `_noalpha` when Keep alpha is off, so the filename alone documents how to reproduce it. The name and contents belong to the result on screen, even while a newer render is still pending. Disabled whenever the current output is in a broken state — export is only available for renderable results.
+- **Export button:** saves the glitched image to disk as `<original>_glitzj_<strategies>_i<intensity>_s<seed>.jpg`, or `…_s<seed>[_<filter>].png` for PNG, or `….gif` for GIF, with `_raw` appended when protection is off, `_noalpha` when Keep alpha is off and `_steady` when Steady is on for an animated GIF, so the filename alone documents how to reproduce it. The name and contents belong to the result on screen, even while a newer render is still pending. Disabled whenever the current output is in a broken state — export is only available for renderable results.
 - **Keyboard:** `R` picks a random seed, `E` exports (when not typing in an input).
 
 ### Controls
@@ -39,13 +39,18 @@ Shown only while a PNG is loaded:
 - **Filter** — Original, None, Sub, Up, Average or Paeth: the PNG filter the image is re-encoded with before glitching (see [Why filters matter](#why-filters-matter)).
 - **Prism** strategy button, and **Keep alpha** for images with an alpha channel. The protection toggle reads "Protect filters" instead of "Protect markers".
 
+Shown only while a GIF is loaded:
+
+- **Prism** strategy button, with its GIF meaning (see [Prism on GIF](#prism-on-gif)). The protection toggle reads "Protect codes".
+- **Steady**, for animated GIFs only (see [Animation](#animation)). Mirrored in the hash as `steady=1`.
+
 Shown only while a JPEG is loaded:
 
 - **Glitch as PNG** — glitches the JPEG through the PNG pipeline instead (see [JPEG as PNG](#jpeg-as-png)). Mirrored in the hash as `png=1`; it stays set when a PNG is loaded, for the next JPEG.
 
 ## Glitch strategies
 
-The strategies below are described in JPEG terms. How they behave on PNG data, and the PNG-only Prism strategy, are covered under [PNG](#png).
+The strategies below are described in JPEG terms. How they behave on PNG and GIF data, and the Prism strategy, are covered under [PNG](#png) and [GIF](#gif).
 
 JPEG stores compressed image data in one or more entropy-coded scans. Baseline files usually place this data in one long run; progressive files spread it across multiple passes; restart markers may split a scan into smaller chunks. Glitzj flattens those mutable byte ranges into one logical scan stream so the strategies can still target the "early", "middle", and "late" parts of the compressed data without corrupting the JPEG markers themselves. This gives corruption a predictable visual character depending on *where* in the logical scan data it is applied:
 
@@ -131,6 +136,56 @@ With "Glitch as PNG" on, a loaded JPEG is drawn to a canvas as the browser shows
 
 The exported PNG carries no metadata from the JPEG. Browsers may decode the same JPEG to slightly different pixels, so a `png=1` link reproduces exactly only in the browser that made it.
 
+## GIF
+
+### Pipeline
+
+1. **Load (once per file).** Walk the blocks: header, global color table, extensions, and per frame its image descriptor, local color table, LZW minimum code size and data sub-blocks. Each frame's sub-block payloads are joined and unpacked into its *codes*, one array entry per LZW code, read at the width a decoder uses. A file that ends without a trailer, or inside a frame's data, is accepted; the frame keeps the data that arrived, and any other block cut off is left out. A minimum code size of 1, which the GIF spec does not allow, is read the way Chrome and ImageIO decoded such a file (the code width is checked after every code, the first one included); Firefox showed nothing for it.
+2. **Strategies** (Static → Crumble, the catalogue order above) run on a copy of each frame's codes, treating them as one logical scan. Frame *k* uses the seed mixed with *k* (frame 0 uses the seed itself), unless Steady is on.
+3. **Code repair** (optional, on by default) or raw packing turns the codes back into data; see [Code repair](#code-repair).
+4. **Prism** changes palette entries; see [Prism on GIF](#prism-on-gif).
+5. **Encode.** The file is copied with every frame's data replaced by the new codes in sub-blocks of 255 bytes, and closed with a trailer. Everything else (extensions, delays, loop count, frame positions and disposal) is kept byte for byte. With no strategies on, the output decodes to the same pixels, and a file written in full 255-byte sub-blocks, as every encoder tested writes them, comes back byte for byte.
+
+Repacking needs no compression step, so the preview file is the export.
+
+### Why codes rather than bytes
+
+LZW codes are up to 12 bits wide and packed across byte boundaries, and a code refers to a dictionary entry built from the codes before it since the last clear code. In tests, damaging the packed bytes made Echo and Drift produce pure noise, because moved bytes no longer line up with code boundaries and land in a different dictionary. Working on whole codes keeps their meaning: a repeated or shifted run of codes still refers to the same dictionary entries, so Echo repeats and Drift displaces real fragments of the picture. The strategy helpers copy into an array of the buffer's own type and let it wrap values, so 12-bit codes move intact; for JPEG and PNG, whose buffers are bytes, nothing changes, which the JPEG digest test pins.
+
+### Strategies on GIF
+
+- A damaged code decodes to a different run of pixels, usually of a different length, so everything after it shifts sideways, and dictionary entries built from it carry the damage on until the next clear code. A damaged clear code, or a new one, makes the rest of the codes read against a different dictionary.
+- **Static, Smear, Crumble** scale their odds by 0.0005: at intensity 100, one hit per 2000 codes, at least one hit above intensity 0. A highly compressed frame has few codes and no clear codes, so even one hit can wreck everything after it.
+- **Dropout** zeroes runs of codes; code 0 is a single pixel of color 0, so the frame loses the pixels those codes stood for and comes up short (see [Code repair](#code-repair)).
+- "Early" and "late" codes are the top and bottom of a frame. In an interlaced frame the first codes cover every eighth row, so damage spreads over the whole frame in stripes.
+
+### Code repair
+
+Observed behavior for damaged LZW data (Chrome, Firefox, and macOS ImageIO through `sips`):
+
+| Damage | Chrome | Firefox | ImageIO |
+| --- | --- | --- | --- |
+| Code past the dictionary, or end code before the frame is full | stops drawing; rest transparent | still image: nothing drawn, yet the `load` event fires | carries on |
+| Data runs out before the frame is full | rest transparent | rest white | rest white |
+| Pixel index past the end of the color table | black | wraps around the table | arbitrary colors |
+| Codes after the frame is full | ignored | ignored | ignored |
+
+"Protect codes" walks the codes as a decoder does, tracking only the length of every dictionary entry, which is enough to count pixels. It keeps every code a decoder accepts, clear codes included wherever the damage left them, and replaces the rest: an end code before the frame is full, or a code past the dictionary, becomes a valid code derived from its value; a pixel index past the color table wraps around it, as Firefox shows it. Codes beyond a full frame are dropped. A frame that comes up short continues with a clear code and its own codes from the start, which decode exactly like the top of the frame, so the picture rolls around like a TV losing vertical hold. Every frame ends with an end code at exactly its size.
+
+Repairing undamaged codes reproduces the original data bit for bit. On every repaired test file Chrome, Firefox and ImageIO showed identical pixels, matching an independent reference decoder.
+
+Earlier designs were measured and dropped: filling a short frame by repeating the last code gave a flat band; forcing clear codes back to their original positions turned shifted codes into noise.
+
+Without protection the codes are packed exactly as damaged. Firefox fires `load` even for a GIF it cannot draw, so the render check cannot catch it; instead the after panel reports how many frames decoders give up on (`data cut off`, or `3 of 12 frames cut off`).
+
+### Prism on GIF
+
+Prism rotates the red, green and blue values of randomly picked palette entries (to green-blue-red or blue-red-green), so every pixel drawn in such a color shifts hue. A gray has no hue to rotate; one of its channels gets its top bit flipped instead. Entries are drawn among the colors the frames use, weighted by how many pixels each covers (transparent pixels left out) and never twice, so the colors that fill most of the picture are the likeliest to change. The pixel counts take one pass over the codes, done on first use and cached. *Intensity drives:* the share of used colors picked, 0–25%, at least one above 0. Every color table gets the same random choices.
+
+### Animation
+
+Every frame is glitched. With Steady off, frame *k* uses the seed mixed with *k*, so the damage differs per frame and jumps around as the animation plays. With Steady on, every frame uses the same seed, so the strategies pick the same relative positions in each frame's codes; on a panning test animation, Drift then kept a stable band while Smear still varied. Animations that only redraw the parts of a frame that change keep earlier damage on screen until something draws over it.
+
 ## Iteration / validity
 
 ### Marker protection
@@ -139,7 +194,7 @@ Inside entropy-coded data a `0xFF` byte may only be followed by `0x00` (byte stu
 
 After the pipeline has run, an optional pass rewrites every offending `0xFF` inside the mutable ranges to `0xFE`. Structural markers, restart markers and legitimate stuffing pairs are untouched, and the glitch itself is preserved. This is on by default ("Protect markers"); turning it off restores the raw behavior for those who want the cut-off look.
 
-For PNG, "Protect filters" plays the same role; see [Filter protection](#filter-protection).
+For PNG, "Protect filters" plays the same role; see [Filter protection](#filter-protection). For GIF, "Protect codes" does; see [Code repair](#code-repair).
 
 ### Renderability check
 
@@ -150,6 +205,7 @@ The output is always tested for renderability before the export button is enable
 Web app (HTML + JavaScript):
 - `FileReader` + `Uint8Array` for byte manipulation
 - `DecompressionStream` / `CompressionStream` for PNG image data
+- Hand-written LZW code packing for GIF
 - `<img>` / `Canvas` for real-time rendering and broken-state detection
 - `Blob` + `URL.createObjectURL` for the live preview
 - `FileSaver` or a download anchor for export
@@ -164,6 +220,8 @@ All byte manipulation runs in the browser's main thread, so large inputs will bl
 
 For PNG a third limit applies: **decompressed image data ≤ 64 MB**, checked from the header before anything is inflated. A 4000 × 4000 RGBA image at 8 bits fits; the same size at 16 bits does not.
 
+For GIF the frames may add up to at most **200 million pixels**, checked from the frame descriptors before any codes are unpacked. Most of the work per render scales with the number of codes, which the file size bounds; only filling frames that came up short scales with pixels. In tests a render took about 1.5 ms per million pixels, 17 ms for a 2800 × 1900 photo.
+
 If any limit is exceeded, the file is rejected with a clear error message stating which limit was hit. No processing is attempted.
 
 A JPEG that ends without an `EOI` marker (a common result of truncated downloads) is accepted, since browsers render such files; the trailing bytes are treated as scan data.
@@ -174,5 +232,7 @@ A JPEG that ends without an `EOI` marker (a common result of truncated downloads
 
 - JPEG (`glitzj.test.js`), with synthetic baseline, restart-marker and progressive JPEGs: range extraction, error cases, determinism, that no strategy ever touches bytes outside the scan ranges, that marker protection removes every fake marker, and a digest of fixed-settings output that pins JPEG results so changes made for other formats cannot alter them.
 - PNG (`png.test.js`), with synthetic PNGs built by Node's own `zlib` for every color type and bit depth, interlaced or not: chunk handling and error cases, the row layout (Adam7 checked against a brute-force pass assignment), inflate limits, hand-computed filter rows, the optimized filter kernels against a literal transcription of the spec for every pixel size, lossless re-filtering, filter protection, Prism, alpha restore, density scaling, sparse sampling, cut-off files, cancellation of export work, building a source from RGBA pixels, that every strategy changes even a small image at low intensity, and that every strategy yields a PNG whose CRCs and zlib stream verify.
+
+- GIF (`gif.test.js`), with synthetic GIFs from an LZW encoder and checked by a reference decoder, both written independently of the app (the decoder gave the same pixels as Chrome, Firefox and ImageIO on every file they decoded in full): block walk and error cases, cut-off files and frames of zero size, minimum code size 1, bit-exact repair of undamaged codes (with and without clear codes when the dictionary fills), replacement of bad codes, the wrap-around of short frames, trimming, palette wraparound, that starting over stays fast on codes that are nearly all clear codes, that raw mode's cut-off count matches the reference decoder, that 12-bit codes survive Echo and Drift, Prism's pixel counts, picks and color rules, that every frame decodes in full with every index inside its palette under random settings, that everything outside the image data stays the same, determinism, Steady, and the pixel limit.
 
 If needed in a later version, larger files can be handled by moving manipulation to a Web Worker, but this is out of scope for now.

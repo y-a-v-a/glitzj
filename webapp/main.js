@@ -3,18 +3,20 @@
 const MAX_FILE_BYTES    = 10 * 1024 * 1024; // 10 MB
 const MAX_DIMENSION     = 4000;             // px
 const MAX_PNG_RAW_BYTES = 64 * 1024 * 1024; // 64 MB, a 4000×4000 RGBA image
+const MAX_GIF_PIXELS    = 200_000_000;      // across all frames
 const MAX_RETRIES       = 20;
 const DEFAULT_INTENSITY = 50;
 const DEFAULT_SEED      = 1;
 const DEFAULT_FILTER    = 'keep';
 const PNG_PACK_DELAY_MS = 400;
 const PNG_PACK_MAX_RAW  = 16 * 1024 * 1024; // larger results are packed on click
-const STRATEGY_ORDER    = [...Object.keys(STRATEGY_FNS), ...Object.keys(PNG_STRATEGY_FNS)];
+const STRATEGY_ORDER    = [...new Set([...Object.keys(STRATEGY_FNS), ...Object.keys(PNG_STRATEGY_FNS), ...Object.keys(GIF_STRATEGY_FNS)])];
 const PNG_FILTERS       = ['keep', ...PNG_FILTER_TYPES];
 
 const FORMATS = {
   jpeg: { mime: 'image/jpeg', ext: 'jpg', strategies: Object.keys(STRATEGY_FNS) },
-  png:  { mime: 'image/png',  ext: 'png', strategies: STRATEGY_ORDER },
+  png:  { mime: 'image/png',  ext: 'png', strategies: [...Object.keys(STRATEGY_FNS), ...Object.keys(PNG_STRATEGY_FNS)] },
+  gif:  { mime: 'image/gif',  ext: 'gif', strategies: [...Object.keys(STRATEGY_FNS), ...Object.keys(GIF_STRATEGY_FNS)] },
 };
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -24,6 +26,7 @@ const state = {
   originalBytes: null,
   scanInfo: null,
   pngSource: null,
+  gifSource: null,
   fileName: null,
   beforeUrl: null,
   after: null,
@@ -37,6 +40,7 @@ const state = {
   protect: true,
   keepAlpha: true,
   asPng: false,
+  steady: false,
 };
 
 // Incremented on every settings change; async decode results carrying an
@@ -78,6 +82,8 @@ const els = {
   keepAlphaToggle:  document.getElementById('keep-alpha-toggle'),
   asPng:            document.getElementById('as-png'),
   asPngToggle:      document.getElementById('as-png-toggle'),
+  steady:           document.getElementById('steady'),
+  steadyToggle:     document.getElementById('steady-toggle'),
   strategyBtns:     document.querySelectorAll('.btn--strategy'),
 };
 
@@ -144,6 +150,10 @@ async function decodeSource(kind, bytes, img) {
     return { scanInfo, pngSource };
   }
 
+  if (kind === 'gif') {
+    return { gifSource: loadGifSource(bytes, { maxPixels: MAX_GIF_PIXELS }) };
+  }
+
   if (typeof DecompressionStream === 'undefined') {
     throw new Error('This browser cannot decompress PNG data. Try a recent Chrome, Firefox or Safari.');
   }
@@ -169,8 +179,8 @@ function loadFile(file) {
 
     if (!FORMATS[kind]) {
       return showError(kind
-        ? `${kind.toUpperCase()} is not supported. Only JPEG and PNG files can be glitched.`
-        : 'Only JPEG and PNG files are supported.');
+        ? `${kind.toUpperCase()} is not supported. Only JPEG, PNG and GIF files can be glitched.`
+        : 'Only JPEG, PNG and GIF files are supported.');
     }
 
     const blobUrl = URL.createObjectURL(file);
@@ -207,6 +217,7 @@ function loadFile(file) {
       state.originalBytes = bytes;
       state.scanInfo      = decoded.scanInfo || null;
       state.pngSource     = decoded.pngSource || null;
+      state.gifSource     = decoded.gifSource || null;
       state.fileName      = file.name || `image.${FORMATS[kind].ext}`;
 
       els.imgBefore.src    = blobUrl;
@@ -264,6 +275,14 @@ function describeImage(img, file) {
     parts.push(`PNG ${png.colorName} ${png.bitDepth}-bit`);
     if (png.interlaced) parts.push('interlaced');
     if (png.animated) parts.push('first frame only');
+  } else if (state.format === 'gif') {
+    const { gif } = state.gifSource;
+    const tables = gif.colorTables.length;
+    parts.push(`GIF${gif.version}`);
+    if (gif.frames.length > 1) parts.push(`${gif.frames.length} frames`);
+    if (tables === 1) parts.push(`${gif.colorTables[0].count} colors`);
+    if (tables > 1) parts.push(`${tables} color tables`);
+    if (gif.frames.some(f => f.interlaced)) parts.push('interlaced');
   } else {
     const { frameType, scanCount } = state.scanInfo;
     parts.push(frameType, scanCount === 1 ? '1 scan' : `${scanCount} scans`);
@@ -284,8 +303,8 @@ function hideError() {
 
 // ── Format-specific controls ──────────────────────────────────────────────────
 // Strategies a format cannot use are hidden but stay selected, so switching
-// back to a PNG restores them. Tooltips describe what each control does to the
-// loaded format.
+// back to a format that has them restores them. Tooltips describe what each
+// control does to the loaded format.
 
 els.strategyBtns.forEach(btn => { btn.dataset.titleJpeg = btn.title; });
 els.protectToggle.dataset.titleJpeg = els.protectToggle.title;
@@ -301,6 +320,12 @@ function isPngMode() {
   return state.format === 'png' || (state.format === 'jpeg' && state.asPng);
 }
 
+// The format whose controls apply: PNG while a JPEG is being glitched as PNG,
+// JPEG before any file is loaded.
+function controlFormat() {
+  return isPngMode() ? 'png' : state.format || 'jpeg';
+}
+
 function isAvailable(name) {
   return FORMATS[outputFormat() || 'png'].strategies.includes(name);
 }
@@ -309,20 +334,29 @@ function effectiveStrategies() {
   return new Set(STRATEGY_ORDER.filter(n => state.activeStrategies.has(n) && isAvailable(n)));
 }
 
+const TITLE_KEYS     = { jpeg: 'titleJpeg', png: 'titlePng', gif: 'titleGif' };
+const PROTECT_LABELS = { jpeg: 'Protect markers', png: 'Protect filters', gif: 'Protect codes' };
+
+function isAnimatedGif() {
+  return state.format === 'gif' && state.gifSource.gif.frames.length > 1;
+}
+
 function syncFormatUi() {
-  const png = isPngMode();
-  const titleKey = png ? 'titlePng' : 'titleJpeg';
+  const format   = controlFormat();
+  const png      = format === 'png';
+  const titleKey = TITLE_KEYS[format];
 
   els.strategyBtns.forEach(btn => {
-    btn.hidden = btn.dataset.format === 'png' && !png;
+    btn.hidden = !!btn.dataset.formats && !btn.dataset.formats.split(' ').includes(format);
     btn.title  = btn.dataset[titleKey] || btn.dataset.titleJpeg;
   });
 
-  els.panels.classList.toggle('panels--png', png);
+  els.panels.classList.toggle('panels--alpha', png || format === 'gif');
   els.pngFilterGroup.hidden    = !png;
   els.keepAlphaToggle.hidden   = !(png && state.pngSource && hasAlphaChannel(state.pngSource.png));
   els.asPngToggle.hidden       = state.format !== 'jpeg';
-  els.protectLabel.textContent = png ? 'Protect filters' : 'Protect markers';
+  els.steadyToggle.hidden      = !isAnimatedGif();
+  els.protectLabel.textContent = PROTECT_LABELS[format];
   els.protectToggle.title      = els.protectToggle.dataset[titleKey];
 }
 
@@ -340,6 +374,7 @@ function writeHash() {
   if (!state.protect) p.set('raw', '1');
   if (!state.keepAlpha) p.set('alpha', '0');
   if (state.asPng) p.set('png', '1');
+  if (state.steady) p.set('steady', '1');
   const hash = p.toString();
   try {
     history.replaceState(null, '', hash ? `#${hash}` : location.pathname + location.search);
@@ -366,6 +401,7 @@ function readHash() {
   state.protect   = p.get('raw') !== '1';
   state.keepAlpha = p.get('alpha') !== '0';
   state.asPng     = p.get('png') === '1';
+  state.steady    = p.get('steady') === '1';
 }
 
 function syncIntensity() {
@@ -381,6 +417,7 @@ function syncControls() {
   els.protect.checked            = state.protect;
   els.keepAlpha.checked          = state.keepAlpha;
   els.asPng.checked              = state.asPng;
+  els.steady.checked             = state.steady;
   els.autoRetry.checked          = state.autoRetry;
   els.strategyBtns.forEach(btn => {
     const on = state.activeStrategies.has(btn.dataset.strategy);
@@ -465,6 +502,11 @@ els.keepAlpha.addEventListener('change', () => {
   scheduleApply();
 });
 
+els.steady.addEventListener('change', () => {
+  state.steady = els.steady.checked;
+  scheduleApply();
+});
+
 els.asPng.addEventListener('change', async () => {
   state.asPng = els.asPng.checked;
   syncFormatUi();
@@ -495,7 +537,8 @@ function exportName(seed) {
   const filter = png && state.pngFilter !== DEFAULT_FILTER ? `_${state.pngFilter}` : '';
   const raw    = state.protect ? '' : '_raw';
   const alpha  = png && !state.keepAlpha && hasAlphaChannel(state.pngSource.png) ? '_noalpha' : '';
-  return `${base}_glitzj_${fx}_i${state.intensity}_s${seed}${filter}${raw}${alpha}.${FORMATS[outputFormat()].ext}`;
+  const steady = state.steady && isAnimatedGif() ? '_steady' : '';
+  return `${base}_glitzj_${fx}_i${state.intensity}_s${seed}${filter}${raw}${alpha}${steady}.${FORMATS[outputFormat()].ext}`;
 }
 
 function download(href, name) {
@@ -647,9 +690,21 @@ function applyStrategies() {
 }
 
 // Returns the output file, plus for PNG the raw stream it wraps and the
-// source it came from, which export needs to compress it.
+// source it came from, which export needs to compress it, and for GIF the
+// number of frames decoders give up on early (only without protection).
 function buildOutput(seed) {
   const strategies = effectiveStrategies();
+
+  if (outputFormat() === 'gif') {
+    const { bytes, cutFrames } = glitchGif(state.gifSource, {
+      strategies,
+      intensity: state.intensity,
+      seed,
+      protect:   state.protect,
+      steady:    state.steady,
+    });
+    return { bytes, raw: null, source: null, cutFrames };
+  }
 
   if (outputFormat() === 'png') {
     const raw = glitchPng(state.pngSource, {
@@ -669,9 +724,18 @@ function buildOutput(seed) {
   return { bytes: buf, raw: null, source: null };
 }
 
+// Without protection a GIF still loads when decoders give up partway, but
+// each viewer shows something different, so the after panel says so.
+function cutNote(cutFrames) {
+  if (cutFrames === 0) return '';
+  const total = state.gifSource.gif.frames.length;
+  return total === 1 ? 'data cut off' : `${cutFrames} of ${total} frames cut off`;
+}
+
 function renderAttempt(gen, seed, attempt) {
-  const { bytes, raw, source } = buildOutput(seed);
+  const { bytes, raw, source, cutFrames = 0 } = buildOutput(seed);
   const name  = exportName(seed);
+  const cut   = cutNote(cutFrames);
   const url   = URL.createObjectURL(new Blob([bytes], { type: FORMATS[outputFormat()].mime }));
   const probe = new Image();
 
@@ -685,7 +749,8 @@ function renderAttempt(gen, seed, attempt) {
       els.seed.value = seed;
       writeHash();
     }
-    const meta = attempt > 0 ? `seed ${seed} after ${attempt} ${attempt === 1 ? 'retry' : 'retries'}` : '';
+    const retried = attempt > 0 ? `seed ${seed} after ${attempt} ${attempt === 1 ? 'retry' : 'retries'}` : '';
+    const meta = [retried, cut].filter(Boolean).join(' · ');
     showAfter('image', { url, name, raw, source }, meta);
   };
 

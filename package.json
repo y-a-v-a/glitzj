@@ -2,7 +2,7 @@
   "name": "glitzj",
   "version": "1.0.0",
   "private": true,
-  "description": "Browser-based JPEG glitch tool. No build step; open webapp/index.html.",
+  "description": "Browser-based JPEG, PNG and GIF glitch tool. No build step; open webapp/index.html.",
   "scripts": {
     "test": "node --test test/**/*.test.js"
   }

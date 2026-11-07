@@ -631,7 +631,7 @@ body::before {
   animation: tear-in 0.45s steps(1, end);
 }
 
-.panels--png .panel__image {
+.panels--alpha .panel__image {
   background: repeating-conic-gradient(var(--color-check) 0 25%, transparent 0 50%) 0 0 / 16px 16px;
 }
 

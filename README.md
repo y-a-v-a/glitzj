@@ -1,6 +1,6 @@
 # Glitzj
 
-A glitch tool for JPEG and PNG images that runs entirely in your browser. Nothing is uploaded; your photos never leave your machine.
+A glitch tool for JPEG, PNG and GIF images that runs entirely in your browser. Nothing is uploaded; your photos never leave your machine.
 
 **Try it at [y-a-v-a.github.io/glitzj](https://y-a-v-a.github.io/glitzj/).**
 
@@ -12,9 +12,11 @@ A glitch is bent data: an image whose bytes have been deliberately damaged, yet 
 
 PNG protects its picture data with checksums, so Glitzj goes one level deeper: it unpacks the rows of pixels, damages them, and packs them up again with fresh checksums. PNG stores each row as differences from neighboring pixels, so one damaged byte runs on as a streak, a smear or a block of color depending on the row's filter. Every export is a real PNG.
 
+GIF compresses its pixels with LZW, which builds a dictionary of pixel runs as it goes and refers back to it with numbered codes. Glitzj damages those codes. A damaged code decodes to a different run of pixels, often a longer or shorter one, so everything after it tears and shifts sideways, and the dictionary entries built from it carry the damage on. Every frame of an animated GIF is glitched and the animation keeps playing. Every export is a real GIF.
+
 ## How to use it
 
-1. Drop a JPEG or PNG onto the page, paste one from the clipboard (a screenshot works), or click the left panel to open a file.
+1. Drop a JPEG, PNG or GIF onto the page, paste one from the clipboard (a screenshot works), or click the left panel to open a file.
 2. Switch on one or more strategies. The right panel updates instantly.
 3. Move the intensity slider to set how hard the effect hits.
 4. Change the seed, or press Randomise, to reroll where the damage lands. The same image, seed and settings always give the same result.
@@ -30,9 +32,9 @@ Your settings are mirrored in the page address, so you can bookmark a look or se
 - **Drift** shifts data forward, tearing and displacing rows.
 - **Smear** corrupts early data for color bleeds and large-scale distortion.
 - **Crumble** corrupts late data, destroying edges while the image stays recognizable.
-- **Prism** (PNG only) decodes random rows with the wrong filter, giving bands of shifted color.
+- **Prism** (PNG and GIF) decodes random rows of a PNG with the wrong filter, giving bands of shifted color. On a GIF it shifts the colors of random palette entries.
 
-Strategies combine freely. On PNG, early and late data are the top and bottom of the image.
+Strategies combine freely. On PNG and GIF, early and late data are the top and bottom of the image.
 
 ### PNG filters
 
@@ -50,15 +52,32 @@ PNG predicts every byte from its neighbors, and the way it does so decides how d
 
 Prefer the PNG look for a photo? With a JPEG loaded, switch on **Glitch as PNG**. Glitzj takes the picture as your browser shows it, turns it into a PNG in memory and glitches that, so the Filter control, Prism and the PNG-style streaks all apply. The export is then a PNG, which is larger than the JPEG it came from, and it carries no camera metadata. Switch it off to return to the JPEG glitch.
 
+### GIF
+
+On a GIF the strategies work on the LZW codes of each frame:
+
+- **Static** swaps random codes for others, so the picture tears at each one and shifts sideways from there.
+- **Dropout** turns runs of codes into single pixels. The picture loses the pixels those codes stood for, slides up, and the space left at the bottom rolls around to the top of the frame, like a TV losing its vertical hold.
+- **Echo** repeats a run of codes, so fragments of the picture repeat.
+- **Drift** shifts a run of codes forward, displacing the picture below it.
+- **Smear** and **Crumble** damage the first or last codes: tears near the top that run on down, or damage near the bottom.
+- **Prism** rotates the red, green and blue values of random palette entries, so every pixel in such a color changes hue. A photo squeezed into 256 colors spreads each tone over many entries, so this lays bare the bands its palette is built from. Grays have no hue to rotate and get split into colors instead. Colors that cover more of the picture are more likely to be picked.
+
+In interlaced GIFs the early codes describe every eighth row, so damage spreads over the whole image in stripes.
+
+Every frame of an animation gets its own random choices, so the glitch jumps around as it plays. Switch on **Steady** to make the same choices on every frame; the damage then tends to stay in place. Many animated GIFs only redraw the parts of each frame that change, so damage can linger on screen until something draws over it.
+
 ## Keeping results viewable
 
 Damaged bytes can accidentally form control codes that make a decoder give up partway, leaving the lower part of the image flat gray. **Protect markers**, on by default, quietly repairs those codes so the whole glitch survives. Turn it off if you want the cut-off look. **Auto-retry** steps through seeds until one renders whenever a result breaks.
 
 For PNG the same toggle reads **Protect filters**: it keeps each row's filter intact so the damage stays in the pixels. Without it, damaged filter bytes reinterpret whole stretches of the image, and an invalid one makes viewers disagree: in testing, Chrome stopped drawing at that row, Firefox showed nothing and the macOS image decoder behind Safari and Preview carried on. **Keep alpha**, on by default for images with transparency, restores the original transparency so damage changes colors instead of punching holes.
 
+For GIF the toggle reads **Protect codes**. Viewers react very differently to damaged LZW data. In testing, Chrome stopped drawing at the first code it could not use and left the rest transparent; Firefox showed nothing at all for such a still image, while still reporting it as loaded; the macOS image decoder carried on. Protect codes replaces every code a viewer would give up on, makes every frame exactly as long as it should be, and keeps palette indices inside the palette. Chrome, Firefox and the macOS decoder then showed identical pixels in every test. Without it, the panel says how many frames viewers will cut off, since Firefox gives no sign of it.
+
 ## Limits
 
-JPEG and PNG, up to 10 MB and 4000 × 4000 pixels; for PNG the unpacked picture data may be at most 64 MB, which a 16-bit 4000 × 4000 image exceeds. Animated PNGs are glitched as a still of their first frame. Very large files would freeze the page.
+JPEG, PNG and GIF, up to 10 MB and 4000 × 4000 pixels; for PNG the unpacked picture data may be at most 64 MB, which a 16-bit 4000 × 4000 image exceeds, and a GIF's frames may add up to at most 200 million pixels. Animated PNGs are glitched as a still of their first frame; animated GIFs keep all their frames. Very large files would freeze the page.
 
 ## Running it
 

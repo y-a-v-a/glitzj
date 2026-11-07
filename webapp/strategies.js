@@ -11,6 +11,10 @@ function makePrng(seed) {
   };
 }
 
+// Buffers hold bytes for JPEG and PNG, and LZW codes of up to 12 bits for GIF
+// (a Uint16Array, see gif.js). Copies keep the buffer's type and arithmetic
+// relies on it to wrap values, so codes move and change as whole codes.
+
 function forEachLogicalChunk(scanInfo, logicalStart, length, visit) {
   if (length <= 0) return;
 
@@ -42,7 +46,7 @@ function forEachLogicalChunk(scanInfo, logicalStart, length, visit) {
 }
 
 function copyScanBytes(buf, scanInfo, logicalStart, length) {
-  const out = new Uint8Array(length);
+  const out = new buf.constructor(length);
   let outOffset = 0;
 
   forEachLogicalChunk(scanInfo, logicalStart, length, (start, end) => {
@@ -201,10 +205,10 @@ function applySmear(buf, scanInfo, intensity, seed) {
   const rand    = makePrng(seed);
   const scanLen = scanInfo.scanLength;
   const reach   = Math.floor(scanLen * (intensity / 100) * 0.25);
-  const offset  = i => { buf[i] = (buf[i] + Math.floor(rand() * 256)) & 0xFF; };
+  const offset  = i => { buf[i] += Math.floor(rand() * 256); };
 
   if (densityScale(scanInfo) < 1) {
-    forEachSparse(scanInfo, 0, reach, densityScale(scanInfo), rand, i => { buf[i] = (buf[i] + 1 + Math.floor(rand() * 255)) & 0xFF; });
+    forEachSparse(scanInfo, 0, reach, densityScale(scanInfo), rand, i => { buf[i] += 1 + Math.floor(rand() * 255); });
   } else {
     mutateScanBytes(buf, scanInfo, 0, reach, offset);
   }
@@ -219,10 +223,10 @@ function applyCrumble(buf, scanInfo, intensity, seed) {
   const rand    = makePrng(seed);
   const scanLen = scanInfo.scanLength;
   const reach   = Math.floor(scanLen * (intensity / 100) * 0.25);
-  const offset  = i => { buf[i] = (buf[i] + Math.floor(rand() * 256)) & 0xFF; };
+  const offset  = i => { buf[i] += Math.floor(rand() * 256); };
 
   if (densityScale(scanInfo) < 1) {
-    forEachSparse(scanInfo, scanLen - reach, reach, densityScale(scanInfo), rand, i => { buf[i] = (buf[i] + 1 + Math.floor(rand() * 255)) & 0xFF; });
+    forEachSparse(scanInfo, scanLen - reach, reach, densityScale(scanInfo), rand, i => { buf[i] += 1 + Math.floor(rand() * 255); });
   } else {
     mutateScanBytes(buf, scanInfo, scanLen - reach, reach, offset);
   }

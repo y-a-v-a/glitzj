@@ -16,7 +16,7 @@
     </div>
     <ul class="site-badges" aria-label="About this tool">
       <li class="badge"><span class="badge__dot" aria-hidden="true"></span>Runs in your browser, nothing is uploaded</li>
-      <li class="badge badge--formats">JPEG · PNG</li>
+      <li class="badge badge--formats">JPEG · PNG · GIF</li>
     </ul>
   </header>
 
@@ -28,18 +28,18 @@
           <span class="panel__meta" id="before-meta"></span>
         </div>
         <div class="panel__frame">
-          <div class="panel__surface" id="drop-zone" tabindex="0" role="button" aria-label="Open a JPEG or PNG file">
+          <div class="panel__surface" id="drop-zone" tabindex="0" role="button" aria-label="Open a JPEG, PNG or GIF file">
             <div class="panel__hint panel__hint--drop" id="drop-hint">
               <svg class="drop-icon" viewBox="0 0 48 48" aria-hidden="true">
                 <path d="M24 31V9m0 0-8 8m8-8 8 8" />
                 <path d="M8 29v8a3 3 0 0 0 3 3h26a3 3 0 0 0 3-3v-8" />
               </svg>
-              <p>Drop a JPEG or PNG here, paste one,<br>or click to open</p>
+              <p>Drop a JPEG, PNG or GIF here, paste one,<br>or click to open</p>
               <p class="panel__hint-small">up to 10 MB and 4000 × 4000 px</p>
             </div>
             <img class="panel__image" id="img-before" alt="Original image" hidden>
             <span class="panel__replace" aria-hidden="true">Click or drop to replace</span>
-            <input type="file" id="file-input" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden>
+            <input type="file" id="file-input" accept="image/jpeg,image/png,image/gif,.jpg,.jpeg,.png,.gif" hidden>
           </div>
         </div>
       </div>
@@ -81,31 +81,31 @@
       <div class="controls__section">
         <h2 class="controls__heading">Strategies</h2>
         <div class="controls__strategies" role="group" aria-label="Glitch strategies">
-          <button class="btn btn--strategy" data-strategy="static"  aria-pressed="false" title="XOR noise across the whole scan" data-title-png="Random bytes; each one streaks across the pixels predicted from it">
+          <button class="btn btn--strategy" data-strategy="static"  aria-pressed="false" title="XOR noise across the whole scan" data-title-png="Random bytes; each one streaks across the pixels predicted from it" data-title-gif="Random codes; each one tears the picture and shifts everything after it">
             <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h1v1H2zM6 2h1v1H6zM11 3h1v1h-1zM4 6h1v1H4zM9 7h1v1H9zM13 6h1v1h-1zM2 10h1v1H2zM7 11h1v1H7zM12 10h1v1h-1zM4 13h1v1H4zM10 13h1v1h-1z"/></svg>
             Static
           </button>
-          <button class="btn btn--strategy" data-strategy="dropout" aria-pressed="false" title="Zero out contiguous byte runs" data-title-png="Zero out byte runs, so predicted pixels repeat their neighbors">
+          <button class="btn btn--strategy" data-strategy="dropout" aria-pressed="false" title="Zero out contiguous byte runs" data-title-png="Zero out byte runs, so predicted pixels repeat their neighbors" data-title-gif="Turn runs of codes into single pixels; the picture slides up and rolls around">
             <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h12v2H2zM2 6h5v4H2zM2 12h12v2H2z"/><path d="M9 6h5v4H9z" opacity=".35"/></svg>
             Dropout
           </button>
-          <button class="btn btn--strategy" data-strategy="echo"    aria-pressed="false" title="Repeat one block over its neighbours" data-title-png="Repeat one block of row data over its neighbors">
+          <button class="btn btn--strategy" data-strategy="echo"    aria-pressed="false" title="Repeat one block over its neighbours" data-title-png="Repeat one block of row data over its neighbors" data-title-gif="Repeat a run of codes, so fragments of the picture repeat">
             <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2z"/><path d="M5 5h5v5H5z" opacity=".6"/><path d="M8 8h5v5H8z" opacity=".3"/></svg>
             Echo
           </button>
-          <button class="btn btn--strategy" data-strategy="drift"   aria-pressed="false" title="Shift a run of bytes forward" data-title-png="Shift a run of row data forward, sliding pixels and color channels">
+          <button class="btn btn--strategy" data-strategy="drift"   aria-pressed="false" title="Shift a run of bytes forward" data-title-png="Shift a run of row data forward, sliding pixels and color channels" data-title-gif="Shift a run of codes forward, displacing the picture below it">
             <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 2h9v2H1zM4 5h11v2H4zM7 8h8v2H7zM1 11h9v2H1z"/></svg>
             Drift
           </button>
-          <button class="btn btn--strategy" data-strategy="smear"   aria-pressed="false" title="Corrupt early (low-frequency) data" data-title-png="Damage the first rows; streaks run on from the top">
+          <button class="btn btn--strategy" data-strategy="smear"   aria-pressed="false" title="Corrupt early (low-frequency) data" data-title-png="Damage the first rows; streaks run on from the top" data-title-gif="Damage the first codes; tears and shifts run down from the top">
             <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h12v3H2z"/><path d="M2 6h12v2H2z" opacity=".65"/><path d="M2 9h12v2H2z" opacity=".4"/><path d="M2 12h12v1H2z" opacity=".2"/></svg>
             Smear
           </button>
-          <button class="btn btn--strategy" data-strategy="crumble" aria-pressed="false" title="Corrupt late (high-frequency) data" data-title-png="Damage the last rows, near the bottom of the image">
+          <button class="btn btn--strategy" data-strategy="crumble" aria-pressed="false" title="Corrupt late (high-frequency) data" data-title-png="Damage the last rows, near the bottom of the image" data-title-gif="Damage the last codes, near the bottom of the picture">
             <svg class="fx-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h12v6H2z" opacity=".35"/><path d="M2 9h3v2H2zM6 9h2v1H6zM10 10h4v2h-4zM3 12h2v2H3zM7 12h3v1H7zM12 13h2v1h-2z"/></svg>
             Crumble
           </button>
-          <button class="btn btn--strategy" data-strategy="prism"   aria-pressed="false" data-format="png" hidden title="Decode random rows with the wrong filter, giving bands of shifted color">
+          <button class="btn btn--strategy" data-strategy="prism"   aria-pressed="false" data-formats="png gif" hidden title="Decode random rows with the wrong filter, giving bands of shifted color" data-title-gif="Rotate the colors of random palette entries, laying bare the bands the palette is built from">
             <svg class="fx-icon fx-icon--prism" viewBox="0 0 16 16" aria-hidden="true"><path class="fx-c" d="M2 3h12v3H2z"/><path class="fx-m" d="M2 7h12v3H2z"/><path class="fx-y" d="M2 11h12v3H2z"/></svg>
             Prism
           </button>
@@ -150,13 +150,18 @@
             Glitch as PNG
           </label>
           <label class="control-toggle" id="protect-toggle" title="Rewrite bytes that would form fake JPEG markers so the result stays decodable"
-            data-title-png="Restore each row's filter type after glitching, so damage stays in the pixel data and the image decodes to the end">
+            data-title-png="Restore each row's filter type after glitching, so damage stays in the pixel data and the image decodes to the end"
+            data-title-gif="Repair codes that make viewers stop or show nothing, and make every frame exactly full, so all viewers show the same result">
             <input type="checkbox" id="protect-markers" checked>
             <span id="protect-label">Protect markers</span>
           </label>
           <label class="control-toggle" id="keep-alpha-toggle" hidden title="Restore the original transparency after glitching, so damage changes colors instead of punching holes">
             <input type="checkbox" id="keep-alpha" checked>
             Keep alpha
+          </label>
+          <label class="control-toggle" id="steady-toggle" hidden title="Make the same random choices on every frame, so the damage tends to stay in place instead of jumping around">
+            <input type="checkbox" id="steady">
+            Steady
           </label>
           <label class="control-toggle" title="When the result is broken, try the next seeds automatically">
             <input type="checkbox" id="auto-retry">
@@ -185,6 +190,7 @@
 
   <script src="jpeg.js"></script>
   <script src="png.js"></script>
+  <script src="gif.js"></script>
   <script src="strategies.js"></script>
   <script src="main.js"></script>
 </body>

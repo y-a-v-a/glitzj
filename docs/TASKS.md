@@ -99,3 +99,17 @@
 - [x] Keep the JPEG scan data so the toggle switches back at once; cache the PNG source per file
 - [x] Show "converting to PNG…" until the source is ready; discard conversions for replaced files
 - [x] Export the converted result as PNG
+
+## Phase 10: GIF support
+
+- [x] GIF block walk: header, color tables, extensions, frames; NETSCAPE loop count and transparent index; specific errors; tolerate a missing trailer or a file cut off inside a block
+- [x] Measure how Chrome, Firefox and macOS ImageIO treat damaged LZW data: bad codes, early end codes, short and long frames, palette indices past the table
+- [x] Unpack each frame's LZW codes once at load; run the existing strategies on the codes, so moved codes keep their meaning (strategy helpers keep the buffer's type; JPEG output unchanged, pinned by the digest test)
+- [x] Code repair ("Protect codes", on by default): replace codes decoders give up on, wrap palette indices, trim long frames, roll short frames around to their top
+- [x] Raw mode: pack damaged codes as they are and report frames decoders cut off in the after panel
+- [x] Prism on GIF: rotate the channels of palette entries, flip a top bit of grays; picks weighted by pixel count
+- [x] All frames glitched; Steady toggle for the same random choices on every frame, mirrored in the hash as `steady=1` and in the export name as `_steady`
+- [x] Guard: reject GIFs whose frames add up to more than 200 million pixels, before unpacking
+- [x] Format-aware UI: info line, tooltips, "Protect codes", checkerboard, Prism, GIF export
+- [x] Node test suite for GIF with an independent LZW encoder and reference decoder
+- [x] Verify repaired output renders identically in Chrome, Firefox and ImageIO
