@@ -89,6 +89,18 @@ The second page, **GIF dither** (`gif.html`), does not glitch. It redraws any im
 
 **Export at original size**, on by default, saves the GIF at the size of the original with each dot drawn as a block of pixels. Switch it off to save one pixel per dot. Pixels that are less than half opaque become transparent; GIF has no partial transparency. An animated GIF is dithered as a still of its first frame. Settings are mirrored in the page address here too.
 
+## JPEG crush
+
+The third page, **JPEG crush** (`crush.html`), does not glitch either. It compresses any image your browser can open as a JPEG and shows the result live, so you can drag the quality all the way down to 0 and watch the 8 × 8 blocks take over. Glitzj uses its own JPEG encoder for this rather than the browser's, so the same image and settings give the same file in every browser, and so it can offer the knobs browsers hide.
+
+- **Quality** runs from 0 to 100 on the IJG scale that libjpeg, GIMP and ImageMagick use. 0 gives the same file as 1: every quantization step is already at 255, the most a baseline JPEG allows. Press **0** to jump there.
+- **Separate color quality** splits the slider in two: detail (brightness) and color. Crush the color and keep the detail for smeared, blocky color over a sharp picture, or the other way around.
+- **Color resolution** sets how many pixels share one color sample: 4:4:4 (none), 4:2:2, 4:2:0 (what most cameras and encoders use), 4:1:1 and 4:1:0, one color sample per 4 × 2 pixels. The detail stays; the color gets coarser.
+- **Generations** compresses, decodes and compresses again, up to 50 times. On its own this changes little: in tests the picture stopped changing after the second generation. **Shift** moves the picture a few pixels right and down between generations, so the blocks land somewhere new every time and the damage adds up. It is moved back before the last generation, so the result lines up with the original.
+- **1:1** above the result shows it without scaling it down.
+
+Transparent pixels are composited over white, since JPEG has no transparency. The panel shows the file size, the bits per pixel and the size as a share of the original file; hover it for the quantization steps. Settings are mirrored in the page address, and the export name lists them.
+
 ## Limits
 
 JPEG, PNG and GIF, up to 10 MB and 4000 × 4000 pixels; for PNG the unpacked picture data may be at most 64 MB, which a 16-bit 4000 × 4000 image exceeds, and a GIF's frames may add up to at most 200 million pixels. Animated PNGs are glitched as a still of their first frame; animated GIFs keep all their frames. Very large files would freeze the page.

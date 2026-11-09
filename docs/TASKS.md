@@ -123,3 +123,13 @@
 - [x] Nearest-color search sorted by red with early exit, cached per 6-bit cell
 - [x] Settings mirrored in the hash; renders coalesced per animation frame; 1:1 view; export at dot or original size
 - [x] Node tests with an independent LZW decoder; Chrome's decoder matched it pixel for pixel on every tested setting
+
+## Phase 12: JPEG crush page
+
+- [x] Separate page `crush.html` that compresses an image as a JPEG with a live preview; nav between all three pages
+- [x] Pure module `crush.js`: own baseline encoder with IJG quality scaling down to 0, AAN DCT, optimal Huffman tables limited to 16 bits, byte stuffing
+- [x] Separate color quality, chroma subsampling 4:4:4 to 4:1:0
+- [x] Generation loss with a shift per generation, rolled back before the last generation
+- [x] Time-sliced rendering with progress; stale jobs abandoned
+- [x] Settings mirrored in the hash and the export name; 1:1 view; `0` key for quality 0
+- [x] Node tests with an independent baseline decoder; Chrome, Firefox and ImageIO decode every subsampling

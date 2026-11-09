@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Glitzj JPEG crush</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23101014'/%3E%3Crect x='6' y='6' width='10' height='10' fill='%2300e5ff'/%3E%3Crect x='16' y='6' width='10' height='10' fill='%23ff2e88'/%3E%3Crect x='6' y='16' width='10' height='10' fill='%23f2f2f5'/%3E%3Crect x='16' y='16' width='10' height='10' fill='%2300e5ff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="gif.css">
+  <link rel="stylesheet" href="crush.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <h1 class="site-title" data-text="glitzj">glitzj</h1>
+      <p class="site-tagline">quality zero, with a hammer</p>
+    </div>
+    <nav class="site-nav" aria-label="Modes">
+      <a class="site-nav__link" href="index.html">Glitch</a>
+      <a class="site-nav__link" href="gif.html">GIF dither</a>
+      <a class="site-nav__link" href="crush.html" aria-current="page">JPEG crush</a>
+    </nav>
+    <ul class="site-badges" aria-label="About this tool">
+      <li class="badge"><span class="badge__dot" aria-hidden="true"></span>Runs in your browser, nothing is uploaded</li>
+    </ul>
+  </header>
+
+  <main class="app">
+    <div class="panels" id="panels">
+      <div class="panel panel--before">
+        <div class="panel__header">
+          <span class="panel__label"><span class="panel__index" aria-hidden="true">01</span>Before</span>
+          <span class="panel__meta" id="before-meta"></span>
+        </div>
+        <div class="panel__frame">
+          <div class="panel__surface" id="drop-zone" tabindex="0" role="button" aria-label="Open an image file">
+            <div class="panel__hint panel__hint--drop" id="drop-hint">
+              <svg class="drop-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M24 31V9m0 0-8 8m8-8 8 8" />
+                <path d="M8 29v8a3 3 0 0 0 3 3h26a3 3 0 0 0 3-3v-8" />
+              </svg>
+              <p>Drop an image here, paste one,<br>or click to open</p>
+              <p class="panel__hint-small">up to 10 MB and 4000 × 4000 px</p>
+            </div>
+            <img class="panel__image" id="img-before" alt="Original image" hidden>
+            <span class="panel__replace" aria-hidden="true">Click or drop to replace</span>
+            <input type="file" id="file-input" accept="image/*" hidden>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel--after" id="panel-after">
+        <div class="panel__header">
+          <span class="panel__label">
+            <span class="panel__index" aria-hidden="true">02</span>JPEG
+            <span class="signal" aria-hidden="true"></span>
+          </span>
+          <span class="panel__meta" id="after-meta"></span>
+          <label class="panel__zoom" title="Show the result without scaling it down, so every 8 × 8 block is visible (Z)">
+            <input type="checkbox" id="zoom">
+            1:1
+          </label>
+        </div>
+        <div class="panel__frame">
+          <div class="panel__surface" id="after-surface">
+            <div class="panel__hint panel__hint--nosignal" id="after-placeholder">
+              <div class="test-card" aria-hidden="true"></div>
+              <p class="nosignal__box">
+                <span class="nosignal__title">No signal</span>
+                <span class="nosignal__sub nosignal__sub--empty">Open an image to start</span>
+              </p>
+            </div>
+            <img class="panel__image panel__image--crush" id="img-after" alt="Compressed JPEG" hidden>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="error" id="error" role="alert" hidden></p>
+
+    <section class="controls controls--dither" id="controls" aria-label="Compression controls">
+      <div class="controls__section">
+        <h2 class="controls__heading">Compression</h2>
+        <div class="controls__row">
+          <div class="control-group control-group--wide control-group--colors">
+            <label class="control-label" for="quality" title="IJG quality, as libjpeg, GIMP and ImageMagick use it. 0 and 1 give the same tables: every step at its maximum of 255">Quality</label>
+            <button class="btn btn--secondary btn--step" type="button" data-for="quality" data-step="-1" aria-label="Quality one lower">−</button>
+            <input class="control-range" type="range" id="quality" min="0" max="100" value="0">
+            <button class="btn btn--secondary btn--step" type="button" data-for="quality" data-step="1" aria-label="Quality one higher">+</button>
+            <span class="control-value" id="quality-value">0</span>
+          </div>
+          <label class="control-toggle" title="Give color its own quality, so you can crush the color and keep the detail, or the other way around">
+            <input type="checkbox" id="split">
+            Separate color quality
+          </label>
+          <div class="control-group control-group--wide control-group--colors" id="chroma-group" hidden>
+            <label class="control-label" for="chroma">Color quality</label>
+            <button class="btn btn--secondary btn--step" type="button" data-for="chroma" data-step="-1" aria-label="Color quality one lower">−</button>
+            <input class="control-range" type="range" id="chroma" min="0" max="100" value="0">
+            <button class="btn btn--secondary btn--step" type="button" data-for="chroma" data-step="1" aria-label="Color quality one higher">+</button>
+            <span class="control-value" id="chroma-value">0</span>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="subsampling" title="How many pixels share one color sample. The detail stays; the color gets coarser">Color resolution</label>
+            <select class="control-input control-select" id="subsampling">
+              <option value="444">4:4:4, full</option>
+              <option value="422">4:2:2, half wide</option>
+              <option value="420" selected>4:2:0, half wide and high</option>
+              <option value="411">4:1:1, quarter wide</option>
+              <option value="410">4:1:0, quarter wide, half high</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls__section">
+        <h2 class="controls__heading">Generation loss</h2>
+        <div class="controls__row">
+          <div class="control-group control-group--wide control-group--colors">
+            <label class="control-label" for="generations" title="Compress, decode and compress again, this many times in all">Generations</label>
+            <button class="btn btn--secondary btn--step" type="button" data-for="generations" data-step="-1" aria-label="One generation fewer">−</button>
+            <input class="control-range" type="range" id="generations" min="1" max="50" value="1">
+            <button class="btn btn--secondary btn--step" type="button" data-for="generations" data-step="1" aria-label="One generation more">+</button>
+            <span class="control-value" id="generations-value">1</span>
+          </div>
+          <div class="control-group control-group--wide" id="shift-group">
+            <label class="control-label" for="shift" title="Move the picture this many pixels right and down between generations, so the 8 × 8 blocks land somewhere new each time. It is moved back before the last one">Shift</label>
+            <input class="control-range" type="range" id="shift" min="0" max="16" value="0">
+            <span class="control-value" id="shift-value">0 px</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls__section controls__actions">
+        <div class="controls__toggles"></div>
+        <div class="controls__buttons">
+          <button class="btn btn--secondary" id="btn-reset">
+            <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v3h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Reset
+          </button>
+          <button class="btn btn--primary" id="btn-export" disabled title="Download the JPEG (E)">
+            <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Export JPEG
+            <kbd class="kbd" aria-hidden="true">E</kbd>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>© 2026 Vincent Bruijn</span>
+    <span class="site-footer__keys"><kbd class="kbd">0</kbd> quality 0 <kbd class="kbd">Z</kbd> 1:1 <kbd class="kbd">E</kbd> export · paste an image anywhere</span>
+  </footer>
+
+  <script src="crush.js"></script>
+  <script src="crush-page.js"></script>
+</body>
+</html>

@@ -206,6 +206,33 @@ Pixels below half opacity get their own index, marked transparent in a graphic c
 
 The same image and settings give the same bytes. Only noise dither uses the seed. Settings are mirrored in the hash (`#dither=atkinson&palette=duotone&colors=2&dot=4`), leaving out values that equal the defaults.
 
+## JPEG crush page
+
+`crush.html` is a third mode that does not glitch: it encodes any image the browser can decode as a baseline JPEG and shows the result live. It shares `style.css` and `gif.css` with the other pages (plus `crush.css`); its logic lives in `crush.js` (pure, no DOM, tested in Node) and `crush-page.js` (the page).
+
+The encoder is Glitzj's own instead of `canvas.toBlob('image/jpeg', q)`: `toBlob` differs per browser, cannot be steered beyond one quality number and gives no way to run generations without decoding through the browser. With its own encoder the same image and settings give the same bytes everywhere.
+
+### Pipeline
+
+1. **Flatten** the RGBA pixels over white.
+2. **Generations** 1 to N − 1: convert to YCbCr (JFIF, full range), pad to whole MCUs by repeating the edge pixels, average the chroma down by the subsampling factors, run the forward DCT (AAN, as libjpeg's float DCT), quantize, dequantize, run the inverse DCT, upsample the chroma by repeating it and convert back to RGB. Then roll the picture right and down by the shift, wrapping around. After the last of these generations the picture is rolled back by the total shift, so the result lines up with the original.
+3. **Final generation**: the same steps up to quantizing; the quantized coefficients are kept.
+4. **Encode** a baseline JFIF file: SOI, APP0, one DQT with both tables, SOF0 with three components (luma sampled `h × v`, both chroma at 1 × 1), one DHT with four tables, one interleaved SOS, the entropy-coded data with `0xFF` stuffing, EOI. The Huffman tables are optimal for the image, built the way libjpeg's `jpeg_gen_optimal_table` does: limited to 16 bits, with a reserved symbol so no code is all ones.
+
+Quality scaling is IJG's: `scale = q < 50 ? floor(5000 / q) : 200 − 2q`, each step `floor((base × scale + 50) / 100)` clamped to 1–255, with the Annex K tables as base. Quality 0 is treated as 1, as libjpeg does. Chroma subsampling factors are 1 × 1, 2 × 1, 2 × 2, 4 × 1 and 4 × 2; 4 × 2 makes 10 blocks per MCU, the most baseline JPEG allows.
+
+The pipeline is a generator that yields after every plane conversion and every component, so the page runs it in slices of about 12 ms, shows "crushing… generation n of N" while it takes longer than one slice, and abandons a job as soon as the settings or the file change. The result on screen carries its own bytes and export name.
+
+### Verification
+
+A 203 × 117 test image, encoded at every subsampling at quality 0 and 100, and at quality 30 with 6 generations and shift 3, decoded at the right size in Chrome 157 and Firefox 159; the quality 0 and 100 files also in macOS ImageIO (through `sips`). Mean error against the source was the same in Chrome and Firefox for every file, and ImageIO's was within 1.4 of theirs; at 4:4:4 quality 100 it was under 0.5 in all three.
+
+On a synthetic test image, generations without a shift stopped changing after the second one (quality 50: mean error 5.89, then 5.93 from generation 2 to 50). With a shift of 1 at quality 10, the mean error grew from 10.3 after one generation to 82.7 after 50.
+
+### Determinism
+
+Settings are mirrored in the hash (`#q=90&split=1&cq=10&sub=410&gen=20&shift=5`), leaving out values that equal the defaults. The export is named `<original>_crush_q<quality>[_cq<color quality>]_<subsampling>[_gen<n>_shift<px>].jpg`.
+
 ## Iteration / validity
 
 ### Marker protection
@@ -254,6 +281,8 @@ A JPEG that ends without an `EOI` marker (a common result of truncated downloads
 - PNG (`png.test.js`), with synthetic PNGs built by Node's own `zlib` for every color type and bit depth, interlaced or not: chunk handling and error cases, the row layout (Adam7 checked against a brute-force pass assignment), inflate limits, hand-computed filter rows, the optimized filter kernels against a literal transcription of the spec for every pixel size, lossless re-filtering, filter protection, Prism, alpha restore, density scaling, sparse sampling, cut-off files, cancellation of export work, building a source from RGBA pixels, that every strategy changes even a small image at low intensity, and that every strategy yields a PNG whose CRCs and zlib stream verify.
 
 - GIF dither (`dither.test.js`), with an LZW decoder written independently of `dither.js`: round trips of the GIF writer at several palette sizes, dictionary clears, the end code at every image length, every method and palette keeping indices inside the palette, determinism and the seed, dot size and enlarging, the share of white dots on mid gray, strength 0, duotone colors, transparency, median cut, palette spread, Bayer matrices and the nearest-color search. In Chrome, its decoder gave the same pixels as this independent decoder for every setting tested.
+
+- JPEG crush (`crush.test.js`), with a baseline decoder written independently of `crush.js`: the zigzag order, IJG quality scaling, the AAN DCTs against the textbook formulas, Huffman length limiting, that decoded coefficients equal the encoded ones, decoding at every subsampling and at sizes that are not whole MCUs, closeness to the source at quality 100, separate color quality, generations, rolling, compositing over white and determinism.
 
 - GIF (`gif.test.js`), with synthetic GIFs from an LZW encoder and checked by a reference decoder, both written independently of the app (the decoder gave the same pixels as Chrome, Firefox and ImageIO on every file they decoded in full): block walk and error cases, cut-off files and frames of zero size, minimum code size 1, bit-exact repair of undamaged codes (with and without clear codes when the dictionary fills), replacement of bad codes, the wrap-around of short frames, trimming, palette wraparound, that starting over stays fast on codes that are nearly all clear codes, that raw mode's cut-off count matches the reference decoder, that 12-bit codes survive Echo and Drift, Prism's pixel counts, picks and color rules, that every frame decodes in full with every index inside its palette under random settings, that everything outside the image data stays the same, determinism, Steady, and the pixel limit.
 

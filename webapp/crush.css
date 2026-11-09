@@ -1,0 +1,22 @@
+/* ─── JPEG crush page ───────────────────────────────────────────────────── */
+
+.panel__image--crush {
+  animation: none;
+  transition: opacity 0.2s;
+}
+
+.panel--after.is-busy .panel__image--crush {
+  opacity: 0.55;
+}
+
+.panel__surface--zoom .panel__image--crush {
+  image-rendering: pixelated;
+}
+
+.controls__toggles:empty {
+  display: none;
+}
+
+.control-group:has(.control-range:disabled) {
+  opacity: 0.4;
+}
