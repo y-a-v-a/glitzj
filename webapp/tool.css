@@ -328,3 +328,12 @@
   max-width: 100%;
   text-overflow: ellipsis;
 }
+
+.controls.controls--bend {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.pedal__knob .control-select {
+  height: 30px;
+  font-size: 0.75rem;
+}

@@ -87,6 +87,7 @@ function createTool(config) {
     get settings() { return state.settings; },
     get source() { return state.source; },
     get result() { return state.result; },
+    get resultName() { return state.resultName; },
     defaults,
     update,
     render: scheduleRender,
