@@ -121,7 +121,7 @@ function* signalFrame(encoded, settings, frame = 0) {
   const wobble = (s.wobble / 100) * n * 0.012;
   const slope = (s.hhold / 100) * period * 1.5 / rows;
   const hDrift = moving ? frame * (s.hhold / 100) * period * 0.02 : 0;
-  const roll = Math.round((s.vhold / 100) * frameRows * (moving ? frame * 0.03 : 1)) % frameRows;
+  const roll = Math.round((s.vhold / 100) * (frameRows - 1) * (moving ? frame * 0.03 : 1)) % frameRows;
   const gain = s.color / 100;
   const tint = s.tint * Math.PI / 180;
   const hueNoise = (s.hue / 100) ** 1.5 * 1.2;
@@ -212,7 +212,7 @@ function* signalFrame(encoded, settings, frame = 0) {
     // Pull brightness and color apart.
     if (s.decoder === 'mono') {
       for (let x = 0; x < n; x++) { yLine[x] = comp[x]; ch[x] = 0; }
-    } else if (s.decoder === 'comb') {
+    } else if (s.decoder === 'comb' && row > 0) {
       // Two neighboring lines carry the color wave in opposite directions, so
       // their sum is brightness and their difference is color. That holds
       // only as long as the two lines show the same thing.
@@ -222,7 +222,8 @@ function* signalFrame(encoded, settings, frame = 0) {
       }
     } else {
       // A notch: averaging samples half a wave apart cancels the subcarrier,
-      // and with it any fine detail that happens to look like it.
+      // and with it any fine detail that happens to look like it. (The first
+      // line of a comb filter's picture gets this too: it has no line above.)
       for (let x = 0; x < n; x++) {
         const y = 0.25 * comp[x < 2 ? 0 : x - 2] + 0.5 * comp[x] + 0.25 * comp[x + 2];
         yLine[x] = y;

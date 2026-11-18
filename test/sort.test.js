@@ -240,3 +240,10 @@ test('chunks, uneven stops and bogo follow the seed; the source is never changed
   }
   assert.deepEqual(picture.rgba, original);
 });
+
+test('a brightness range up to 100 includes pure white', () => {
+  const rgba = new Uint8ClampedArray(8 * 4).fill(255);
+  const result = run(sortSteps({ rgba, width: 8, height: 1 }, { span: 'threshold', low: 0, high: 100, progress: 100 }));
+  assert.equal(result.sorted, 8);
+});
+

@@ -170,3 +170,23 @@ test('the same seed gives the same file, and the source picture is never changed
   assert.deepEqual(source.rgba, original);
   assert.deepEqual(operate({}, source).bytes, operate({}).bytes, 'cuts never reach the numbers kept for the next run');
 });
+
+test('a picture too small for the claimed layout keeps an honest header, and no side outgrows 16 bits', () => {
+  const tiny = { rgba: photo(7, 3), width: 7, height: 3, cache: {} };
+  for (const subsampling of Object.keys(SUBSAMPLING)) {
+    for (const sampling of Object.keys(SUBSAMPLING)) {
+      for (const widen of [-16, 0, 16]) {
+        const result = run(surgerySteps(tiny, { ...honest, subsampling, sampling, widen }));
+        decodeBaseline(result.bytes, { trailing: true });
+        assert.ok(result.width >= 1 && result.height >= 1);
+      }
+    }
+  }
+  for (const subsampling of Object.keys(SUBSAMPLING)) {
+    for (const sampling of SURGERY_SAMPLINGS) {
+      const header = surgeryHeader(crushLayout(264, 4000, subsampling), 264, 4000, { subsampling, sampling, widen: -16 });
+      assert.ok(header.width <= 65535 && header.height <= 65535, `${subsampling} as ${sampling}: ${header.width}×${header.height}`);
+    }
+  }
+});
+

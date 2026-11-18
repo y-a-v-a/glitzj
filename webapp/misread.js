@@ -217,7 +217,11 @@ function misreadShift(bytes, { skip = 0, bits = 0, reverse = false, swap = false
 // ── Reading ───────────────────────────────────────────────────────────────────
 
 function misreadHeight(length, width, format, maxHeight = MISREAD_MAX_HEIGHT) {
-  let rows = Math.ceil(length / (width * MISREAD_FORMATS[format].bpp));
+  // A stream of whole bytes or whole pixel pairs can end in a little padding;
+  // that is not a row.
+  const bpp = MISREAD_FORMATS[format].bpp;
+  const padding = format === 'mono1' ? 7 : format === 'yuyv' ? 1 : 0;
+  let rows = Math.ceil((Math.floor(length / bpp) - padding) / width);
   if (format === 'i420') {
     // The color planes follow the brightness plane, so the reader has to
     // settle on a height the data can fill completely.

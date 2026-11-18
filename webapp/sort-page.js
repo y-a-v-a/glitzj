@@ -3,6 +3,7 @@
 const playButton = document.getElementById('btn-play');
 const playLabel = document.getElementById('play-label');
 let playing = false;
+let playTimer = 0;
 
 const usesSeed = s => s.span === 'chunks' || s.algorithm === 'bogo' || s.jitter > 0;
 
@@ -67,7 +68,8 @@ const tool = createTool({
   shown() {
     if (!playing) return;
     if (tool.settings.progress >= 100) return stopPlay();
-    setTimeout(() => { if (playing) tool.update({ progress: tool.settings.progress + 1 }); }, 30);
+    clearTimeout(playTimer);
+    playTimer = setTimeout(() => { if (playing) tool.update({ progress: tool.settings.progress + 1 }); }, 30);
   },
 });
 

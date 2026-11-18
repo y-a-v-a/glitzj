@@ -129,13 +129,17 @@ function surgeryHeader(layout, width, height, s) {
   const blocks = layout.mcuCols * layout.mcuRows * (layout.h * layout.v + 2);
   const mcus = Math.floor(blocks / (h * v + 2));
 
-  if (!lyingAboutLayout && !s.widen) return { width, height, h, v, honest: true };
+  // A picture so small that it holds less than one unit of the claimed layout
+  // cannot carry that lie.
+  if ((!lyingAboutLayout && !s.widen) || mcus < 1) return { width, height, h: layout.h, v: layout.v, honest: true };
 
   // The claimed size has to be a whole number of units, and no more of them
   // than the file holds, or the decoder would run out of data.
   const honestCols = lyingAboutLayout ? Math.ceil(width / (8 * h)) : layout.mcuCols;
-  const cols = Math.max(1, Math.min(mcus, honestCols + s.widen));
-  const rows = Math.max(1, Math.floor(mcus / cols));
+  // A JPEG header has 16 bits for each side.
+  const most = unit => Math.floor(65535 / (8 * unit));
+  const cols = Math.max(1, Math.min(mcus, most(h), honestCols + s.widen));
+  const rows = Math.max(1, Math.min(most(v), Math.floor(mcus / cols)));
   return { width: cols * 8 * h, height: rows * 8 * v, h, v, honest: false };
 }
 

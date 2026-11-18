@@ -253,7 +253,7 @@ Each tool is a pure module (no DOM, tested in Node) that exposes a generator, `<
 
 ### Hand-off
 
-`handoff.js` keeps the image the page is working on in IndexedDB (database `glitzj`, one record), so it is there when another page of the app is opened. A random id written to `sessionStorage` ties the record to the tab that stored it: navigating within a tab carries the image along, a new tab starts empty, and a second tab never picks up the first tab's image. Every page stores the file it opened and, on start, loads the stored one if nothing else has been opened. A carried-over image skips the 10 MB limit (it may be the result of a tool) and fails silently where a page cannot use it: the Glitch page ignores anything that is not a JPEG, PNG or GIF. Where storage is unavailable nothing is kept and nothing breaks.
+`handoff.js` keeps the image the page is working on in IndexedDB (database `glitzj`), so it is there when another page of the app is opened. Every tab stores its image under an id of its own, made up once and kept in `sessionStorage`: navigating within a tab carries the image along, a new tab starts empty, and two tabs never see each other's image. A closed tab cannot remove its record, so each save also removes records of other tabs that are more than a day old. Every page stores the file it opened and, on start, loads the stored one if nothing else has been opened. A carried-over image skips the 10 MB limit (it may be the result of a tool) and fails silently where a page cannot use it: the Glitch page ignores anything that is not a JPEG, PNG or GIF. Where storage is unavailable nothing is kept and nothing breaks.
 
 **Feed back** hands the result on screen to the page's own `loadFile` as a file named like the export, which also stores it for the other pages. On the Glitch page a PNG result is compressed first, as for export.
 
@@ -275,7 +275,7 @@ Each tool is a pure module (no DOM, tested in Node) that exposes a generator, `<
    - *Quality*: the DQT holds the tables for the claimed quality.
    - *Swap the step tables*: table 0 and 1 change places.
    - *Claimed color*: the frame header names other sampling factors. The scan is unchanged, so the decoder assigns its blocks to the wrong components. Each component would then be decoded with another's Huffman tables, so in this case the file has one DC and one AC table that all components share.
-   - *Claimed width*: with `B` blocks stored and `b` blocks per MCU under the claimed sampling, the decoder can be given `floor(B / b)` MCUs. The header claims `cols` MCUs per row, the honest number plus the setting, and `floor(MCUs / cols)` rows, so the scan always holds at least what the header asks for. Data left over after the last claimed MCU is ignored by decoders.
+   - *Claimed width*: with `B` blocks stored and `b` blocks per MCU under the claimed sampling, the decoder can be given `floor(B / b)` MCUs. The header claims `cols` MCUs per row, the honest number plus the setting, and `floor(MCUs / cols)` rows, so the scan always holds at least what the header asks for. Neither side may exceed the 16 bits a JPEG header has for it, and a picture that holds less than one MCU of the claimed layout keeps its honest header. Data left over after the last claimed MCU is ignored by decoders.
 4. **Write** a baseline JFIF file as crush does: optimal Huffman tables for the coefficients as cut.
 
 ### Verification

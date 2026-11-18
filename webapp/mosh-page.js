@@ -9,6 +9,7 @@ const btnDonor = document.getElementById('btn-donor');
 const donorInput = document.getElementById('donor-input');
 
 let playing = false;
+let playTimer = 0;
 let donor = null;
 let donorCount = 0;
 
@@ -78,7 +79,8 @@ const tool = createTool({
     btnRecord.disabled = !recording.available();
     if (!playing) return;
     if (tool.settings.frames >= MAX_FRAMES) return stopPlay();
-    setTimeout(() => { if (playing) tool.update({ frames: tool.settings.frames + 1 }); }, 33);
+    clearTimeout(playTimer);
+    playTimer = setTimeout(() => { if (playing) tool.update({ frames: tool.settings.frames + 1 }); }, 33);
   },
 });
 

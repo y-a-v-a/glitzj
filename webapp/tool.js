@@ -324,12 +324,14 @@ function createTool(config) {
   // a glitched PNG is often far larger than the photo it came from.
   function loadFile(file, { own = false, quiet = false, restored = false } = {}) {
     if (!quiet) hideError();
-    const gen = ++state.loadGen;
     const fail = message => { if (!quiet) showError(message); };
 
+    // Checked before anything else, so a file that is refused does not cancel
+    // an image that is still loading.
     if (!own && file.size > MAX_FILE_BYTES) {
       return fail(`File too large (${formatBytes(file.size)}). Maximum is 10 MB.`);
     }
+    const gen = ++state.loadGen;
 
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -426,6 +428,7 @@ function createTool(config) {
 
   function show(result, settings) {
     setBusy(false);
+    hideError();
     if (isCanvas) {
       if (els.after.width !== result.width) els.after.width = result.width;
       if (els.after.height !== result.height) els.after.height = result.height;
@@ -527,9 +530,13 @@ function toolRecorder(tool, { button, label, onStart }) {
     if (!type) return tool.showError('This browser cannot record video from a page.');
     const chunks = [];
     const name = tool.resultName.replace(/\.png$/, type.startsWith('video/mp4') ? '.mp4' : '.webm');
-    recorder = new MediaRecorder(canvas.captureStream(30), { mimeType: type, videoBitsPerSecond: 12_000_000 });
+    const stream = canvas.captureStream(30);
+    recorder = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 12_000_000 });
     recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    recorder.onerror = stop;
     recorder.onstop = () => {
+      stream.getTracks().forEach(track => track.stop());
+      if (!chunks.length) return;
       const url = URL.createObjectURL(new Blob(chunks, { type: type.split(';')[0] }));
       const a = document.createElement('a');
       a.href = url;
@@ -545,8 +552,9 @@ function toolRecorder(tool, { button, label, onStart }) {
 
   function stop() {
     if (!recorder) return;
-    recorder.stop();
+    const stopping = recorder;
     recorder = null;
+    if (stopping.state !== 'inactive') stopping.stop();
     button.classList.remove('is-recording');
     label.textContent = 'Record';
   }

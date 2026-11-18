@@ -11,7 +11,7 @@ const tool = createTool({
     read:    { default: MISREAD_DEFAULTS.read, choices: FORMAT_KEYS, hash: 'r' },
     width:   {
       default: MISREAD_DEFAULTS.width, min: -400, max: 400, hash: 'dw',
-      format: (v, s, t) => (t.source ? `${Math.max(1, t.source.width + v)} px` : (v > 0 ? `+${v}` : String(v))),
+      format: (v, s, t) => (t.source ? `${Math.max(1, Math.min(MISREAD_MAX_HEIGHT, t.source.width + v))} px` : (v > 0 ? `+${v}` : String(v))),
     },
     skip:    { default: MISREAD_DEFAULTS.skip, min: 0, max: 16 },
     bits:    { default: MISREAD_DEFAULTS.bits, min: 0, max: 7 },

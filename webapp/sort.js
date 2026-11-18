@@ -318,7 +318,7 @@ function* sortSteps(source, settings) {
   const keyMax = 2 ** keyBits - 1;
   const algorithm = SORT_FNS[s.algorithm] || sortBubble;
   const random = prng(s.seed);
-  const lowCut = Math.min(s.low, s.high) * 2.55, highCut = Math.max(s.low, s.high) * 2.55;
+  const lowCut = Math.min(s.low, s.high) * 255 / 100, highCut = Math.max(s.low, s.high) * 255 / 100;
   const meanChunk = Math.max(2, (s.size / 100) ** 2 * length);
 
   const src = new Uint32Array(rgba.buffer, rgba.byteOffset, width * height);

@@ -145,3 +145,16 @@ test('a result has as many rows as lines were asked for', () => {
   assert.equal(out.width, 120);
   assert.equal(out.rgba.length, 240 * 120 * 4);
 });
+
+test('vertical hold at its maximum is not the same as none', () => {
+  const picture = smoothPicture(60, 60);
+  assert.notDeepEqual(receive(picture, { lines: 'source', vhold: 100 }).rgba, receive(picture, { lines: 'source', vhold: 0 }).rgba);
+});
+
+test('the comb filter has no line above the first one and still shows it at full brightness', () => {
+  const gray = { width: 80, height: 10, rgba: new Uint8ClampedArray(80 * 10 * 4).fill(200) };
+  for (let i = 3; i < gray.rgba.length; i += 4) gray.rgba[i] = 255;
+  const out = receive(gray, { lines: 'source', decoder: 'comb' }).rgba;
+  for (const row of [0, 1, 5]) assert.ok(Math.abs(out[(row * 80 + 40) * 4] - 200) <= 2, `row ${row}: ${out[(row * 80 + 40) * 4]}`);
+});
+

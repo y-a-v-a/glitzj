@@ -4,15 +4,16 @@
 //
 // Keeps the image you are working on while you move between the pages, so a
 // result from one tool can be broken further by the next. The image is stored
-// in this browser's IndexedDB and nowhere else. It belongs to the tab: a mark
-// in sessionStorage ties the stored image to the tab that stored it, so a new
-// tab starts empty and a second tab never picks up the image of the first.
+// in this browser's IndexedDB and nowhere else. It belongs to the tab: every
+// tab stores its image under a name of its own, kept in sessionStorage, so a
+// new tab starts empty and two tabs never see each other's image.
 //
 // Everything here is a convenience. Where storage is unavailable (private
 // windows, blocked site data) every call quietly does nothing.
 
 const Handoff = (() => {
-  const DB = 'glitzj', STORE = 'handoff', KEY = 'image', MARK = 'glitzj-handoff';
+  const DB = 'glitzj', STORE = 'handoff', MARK = 'glitzj-handoff';
+  const KEEP_MS = 24 * 60 * 60 * 1000;
 
   function open() {
     return new Promise((resolve, reject) => {
@@ -27,28 +28,49 @@ const Handoff = (() => {
     return open().then(db => new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, mode);
       const req = run(tx.objectStore(STORE));
-      tx.oncomplete = () => { db.close(); resolve(req.result); };
+      tx.oncomplete = () => { db.close(); resolve(req && req.result); };
       tx.onabort = tx.onerror = () => { db.close(); reject(tx.error); };
     }));
   }
 
-  // Stores the image the page now works on. `blob` is the file as it was
-  // opened, or a result that was fed back as the new source.
+  // The name this tab stores its image under, made up once per tab.
+  function tabId(create) {
+    let id = sessionStorage.getItem(MARK);
+    if (!id && create) {
+      id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem(MARK, id);
+    }
+    return id;
+  }
+
+  // Stores the image the page now works on, in place of this tab's previous
+  // one. `blob` is the file as it was opened, or a result that was fed back
+  // as the new source. A closed tab cannot clean up after itself, so images
+  // that other tabs left behind more than a day ago are removed here.
   async function save(blob, name) {
     try {
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      sessionStorage.setItem(MARK, id);
-      await request('readwrite', store => store.put({ id, blob, name: name || 'image' }, KEY));
+      const id = tabId(true);
+      const now = Date.now();
+      await request('readwrite', store => {
+        const all = store.openCursor();
+        all.onsuccess = () => {
+          const cursor = all.result;
+          if (!cursor) return;
+          if (cursor.key !== id && !(now - cursor.value.time < KEEP_MS)) cursor.delete();
+          cursor.continue();
+        };
+        return store.put({ blob, name: name || 'image', time: now }, id);
+      });
     } catch {}
   }
 
   // The image this tab stored last, as a File, or null.
   async function load() {
     try {
-      const id = sessionStorage.getItem(MARK);
+      const id = tabId(false);
       if (!id) return null;
-      const record = await request('readonly', store => store.get(KEY));
-      if (!record || record.id !== id || !(record.blob instanceof Blob)) return null;
+      const record = await request('readonly', store => store.get(id));
+      if (!record || !(record.blob instanceof Blob)) return null;
       return new File([record.blob], record.name, { type: record.blob.type });
     } catch {
       return null;

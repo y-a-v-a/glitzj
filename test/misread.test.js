@@ -143,3 +143,14 @@ test('changing a setting on the same picture reuses the written bytes only when 
   run(misreadSteps(source, { ...honest, written: 'i420', read: 'gray8' }));
   assert.deepEqual(run(misreadSteps(source, { ...honest, written: 'rgb24', read: 'gray8' })).rgba, a);
 });
+
+test('padding at the end of the stream does not become an extra row', () => {
+  for (const [w, h] of [[13, 7], [1, 1], [9, 5]]) {
+    const picture = noisePicture(w, h);
+    for (const format of Object.keys(MISREAD_FORMATS)) {
+      const out = misread(picture, { ...honest, written: format, read: format });
+      assert.deepEqual([out.width, out.height], [w, h], `${format} at ${w}×${h}`);
+    }
+  }
+});
+
