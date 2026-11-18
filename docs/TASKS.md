@@ -140,7 +140,7 @@
 - [x] `pixels.js`: seeded and hash-based random numbers, bell-curve noise, compositing over white, resizing
 - [x] `handoff.js`: the image of the current tab is kept in IndexedDB and loaded by the next page; tied to the tab through `sessionStorage`
 - [x] Feed back on every page, including Glitch, GIF dither and JPEG crush: the result becomes the source
-- [x] Navigation with all nine pages, wrapping on narrow screens
+- [x] Navigation with all pages, wrapping on narrow screens
 
 ## Phase 14: Split page
 
@@ -179,3 +179,9 @@
 - [x] Shared Huffman tables when the claimed sampling differs, so every lie decodes
 - [x] Node tests with the shared independent decoder; 450 combinations decoded in Chrome, 180 in ImageIO
 
+## Phase 20: Surprise me and Mosh page
+
+- [x] Surprise me on every pixel tool: each page supplies a function that rolls a whole look
+- [x] `mosh.js`: next frame by zoom, pan, spin or another picture; logarithmic block motion search; invented vectors for Fall and Scatter; correction; runs that continue from the last frame
+- [x] Play and Record, with the recorder shared with the Signal page
+- [x] Node tests

@@ -9,7 +9,6 @@ const recordLabel = document.getElementById('record-label');
 let live = false;
 let lastFrame = 0;
 let frameTimer = 0;
-let recorder = null;
 
 const percent = { min: 0, max: 100 };
 const D = SIGNAL_DEFAULTS;
@@ -86,7 +85,7 @@ const tool = createTool({
   // While live, every received frame asks for the next, no faster than a
   // television would show them.
   shown() {
-    btnRecord.disabled = !canRecord();
+    btnRecord.disabled = !recording.available();
     if (!live) return;
     const wait = Math.max(0, FRAME_MS - (performance.now() - lastFrame));
     clearTimeout(frameTimer);
@@ -105,7 +104,7 @@ function nextFrame() {
 
 function setLive(on) {
   if (on === live) return;
-  if (!on && recorder) stopRecording();
+  if (!on) recording.stop();
   live = on;
   btnLive.setAttribute('aria-pressed', String(on));
   tool.els.panelAfter.classList.toggle('is-live', on);
@@ -118,41 +117,4 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) setLi
 
 // ── Recording ─────────────────────────────────────────────────────────────────
 
-function canRecord() {
-  return Boolean(tool.result && window.MediaRecorder && tool.els.after.captureStream);
-}
-
-function startRecording() {
-  const stream = tool.els.after.captureStream(30);
-  const type = ['video/webm;codecs=vp9', 'video/webm', 'video/mp4'].find(t => MediaRecorder.isTypeSupported(t));
-  if (!type) return tool.showError('This browser cannot record video from a page.');
-  const chunks = [];
-  const name = tool.resultName.replace(/\.png$/, type.startsWith('video/mp4') ? '.mp4' : '.webm');
-  recorder = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 12_000_000 });
-  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
-  recorder.onstop = () => {
-    const url = URL.createObjectURL(new Blob(chunks, { type: type.split(';')[0] }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 30_000);
-  };
-  recorder.start();
-  btnRecord.classList.add('is-recording');
-  recordLabel.textContent = 'Stop and save';
-  setLive(true);
-}
-
-function stopRecording() {
-  if (!recorder) return;
-  recorder.stop();
-  recorder = null;
-  btnRecord.classList.remove('is-recording');
-  recordLabel.textContent = 'Record';
-}
-
-btnRecord.addEventListener('click', () => {
-  if (recorder) stopRecording();
-  else if (canRecord()) startRecording();
-});
+const recording = toolRecorder(tool, { button: btnRecord, label: recordLabel, onStart: () => setLive(true) });

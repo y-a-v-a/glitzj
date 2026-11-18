@@ -509,3 +509,52 @@ function createTool(config) {
 
   return tool;
 }
+
+// ── Recording ─────────────────────────────────────────────────────────────────
+//
+// For the pages whose picture moves: records the result canvas as a video file
+// while the page keeps drawing frames on it. `button` starts and stops, `label`
+// is the element holding its text, `onStart` gets the picture moving.
+
+function toolRecorder(tool, { button, label, onStart }) {
+  const canvas = tool.els.after;
+  let recorder = null;
+
+  const available = () => Boolean(tool.result && window.MediaRecorder && canvas.captureStream);
+
+  function start() {
+    const type = ['video/webm;codecs=vp9', 'video/webm', 'video/mp4'].find(t => MediaRecorder.isTypeSupported(t));
+    if (!type) return tool.showError('This browser cannot record video from a page.');
+    const chunks = [];
+    const name = tool.resultName.replace(/\.png$/, type.startsWith('video/mp4') ? '.mp4' : '.webm');
+    recorder = new MediaRecorder(canvas.captureStream(30), { mimeType: type, videoBitsPerSecond: 12_000_000 });
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => {
+      const url = URL.createObjectURL(new Blob(chunks, { type: type.split(';')[0] }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    };
+    recorder.start();
+    button.classList.add('is-recording');
+    label.textContent = 'Stop and save';
+    onStart();
+  }
+
+  function stop() {
+    if (!recorder) return;
+    recorder.stop();
+    recorder = null;
+    button.classList.remove('is-recording');
+    label.textContent = 'Record';
+  }
+
+  button.addEventListener('click', () => {
+    if (recorder) stop();
+    else if (available()) start();
+  });
+
+  return { available, stop, get recording() { return Boolean(recorder); } };
+}

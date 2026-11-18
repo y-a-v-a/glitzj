@@ -2,7 +2,7 @@
 
 A workshop for breaking images on purpose, running entirely in your browser. Nothing is uploaded; your photos never leave your machine.
 
-It started as a glitch tool for JPEG, PNG and GIF files and grew into nine tools. None of them paints an effect on top of a picture. Each one takes a real mechanism (a file format, a sorting algorithm, a printing press, a tape recorder, a television) and uses it wrongly, so what you see is what that mechanism does when it goes wrong.
+It started as a glitch tool for JPEG, PNG and GIF files and grew into ten tools. None of them paints an effect on top of a picture. Each one takes a real mechanism (a file format, a sorting algorithm, a printing press, a tape recorder, a television) and uses it wrongly, so what you see is what that mechanism does when it goes wrong.
 
 | | |
 |---|---|
@@ -15,6 +15,7 @@ It started as a glitch tool for JPEG, PNG and GIF files and grew into nine tools
 | **Bend** | play the picture through audio effects, and listen to it |
 | **Misread** | read the right bytes with the wrong width, format or alignment |
 | **Signal** | send the picture as analog television and receive it badly |
+| **Mosh** | apply the motion of a video to a still, over and over, with no keyframe |
 
 An image you open in one tool is there in the next, and every result can be fed back in as a new source, so the tools chain: sort it, send it through the television, crush what arrives.
 
@@ -195,13 +196,26 @@ Every result is exactly what a program would show that was told the wrong thing 
 - **Tracking** and **Dropouts** are a video recorder with a worn tape: a band of torn, colorless lines, a ragged strip at the bottom, white dashes.
 - **Live** receives frame after frame: the snow moves, the dots crawl, whatever has lost its hold rolls. **Record** saves the moving picture as a video file.
 
+## Mosh
+
+**Mosh** (`mosh.html`) is datamoshing for a single picture. Video is not stored as pictures: a codec stores a full picture now and then, a keyframe, and for the frames in between only instructions: cut the previous frame into blocks, take each block from where it was a moment ago, and add a small correction. Datamoshing removes the keyframes, so instructions meant for one picture are carried out on another, again and again, and nothing ever puts it right.
+
+A still has no frames in between, so this page makes one, and then does what a video encoder does: it searches, block by block, for where each block of the next frame came from. The search is a real one and makes the mistakes real encoders make. In a flat sky every position matches equally well, so the vectors there point anywhere, and those mistakes are what the smears grow from.
+
+- **Zoom**, **Pan** and **Spin** make the next frame by moving the picture a little. **Strength** sets how far, **Direction** which way.
+- **Another picture** uses a different picture as the next frame. The encoder still finds a place in your picture for every block of the other one, so the first frame is the other picture rebuilt from pieces of yours.
+- **Fall** and **Scatter** skip the search: the brighter a block, the further it moves, or every block takes its pixels from somewhere nearby.
+- **Blocks** is the size of the pieces, 8, 16 or 32 pixels. **Frame size** is the size of the video frame, and of the result.
+- **Frames** is how many times the instructions are carried out, each time on the result of the time before. **Play** runs them one by one; **Record** saves the run as a video file.
+- **Correction** is what a codec adds for whatever the vectors cannot explain. At 0 it is thrown away. Turned all the way up, the first frame is exactly the next frame, as in a working codec, and after that the same correction is added again every frame and burns in.
+
 ## From tool to tool
 
 The image you open follows you from page to page for as long as the tab is open, so you can try the same picture in every tool without opening it again. It is kept in your browser's own storage, tied to that tab, and nowhere else.
 
-**Surprise me** (or the **X** key), on the six newer tools, rolls every setting at once for a look you did not ask for. **Reset** takes you back.
+**Surprise me** (or the **X** key), on the seven newer tools, rolls every setting at once for a look you did not ask for. **Reset** takes you back.
 
-**Feed back**, next to Export on every page, makes the result on screen the new source. That turns the nine tools into one chain, in any order and as long as you like, and the name of the exported file keeps the whole recipe.
+**Feed back**, next to Export on every page, makes the result on screen the new source. That turns the ten tools into one chain, in any order and as long as you like, and the name of the exported file keeps the whole recipe.
 
 ## Limits
 

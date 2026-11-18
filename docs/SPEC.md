@@ -235,13 +235,13 @@ Settings are mirrored in the hash (`#q=90&split=1&cq=10&sub=410&gen=20&shift=5`)
 
 ## The pixel tools
 
-Six more pages break pictures in other ways than damaging a file's bytes: JPEG surgery, Split, Sort, Bend, Misread and Signal. They share one rule with the rest of the app: no effect is painted on. Each page implements a real mechanism (a codec, an algorithm, a color model, a signal chain) and misuses it, so every artifact is something that mechanism does.
+Seven more pages break pictures in other ways than damaging a file's bytes: JPEG surgery, Split, Sort, Bend, Misread, Signal and Mosh. They share one rule with the rest of the app: no effect is painted on. Each page implements a real mechanism (a codec, an algorithm, a color model, a signal chain) and misuses it, so every artifact is something that mechanism does.
 
 Each tool is a pure module (no DOM, tested in Node) that exposes a generator, `<tool>Steps(source, settings)`, plus a small page script. `source` is `{ rgba, width, height, cache }`; `cache` belongs to the loaded image and holds whatever is expensive and does not depend on the settings that change most (color planes, the written byte stream, the encoded signal, the quantized coefficients). The generator yields now and then, optionally a progress fraction, and returns either pixels `{ rgba, width, height }` or a finished file `{ bytes, type, ext, width, height }`.
 
 ### The page shell
 
-`tool.js` holds what the six pages have in common, so a page script is little more than a description of its settings:
+`tool.js` holds what the seven pages have in common, so a page script is little more than a description of its settings:
 
 - **Settings** are declared once, each with a default and either a range of whole numbers, a list of choices, a boolean, or a list of whole numbers. From that one description the shell sanitizes values, mirrors them in the hash (defaults left out) and wires the controls.
 - **Controls** are bound from the markup: `data-setting` on inputs, selects and checkboxes, `data-for` + `data-step` on stepper buttons, `data-choice` + `data-value` on buttons that pick one of a list, `data-toggle` on on/off buttons, and `id="<key>-value"` for a readout.
@@ -401,6 +401,25 @@ With everything in step 3 off and no smoothing, a soft test picture comes back w
 
 Hash: `#lines=240&set=comb&color=120&tint=20&noise=30&ghost=40&hue=20&bleed=60&soft=40&jitter=30&wobble=20&hhold=15&vhold=10&tracking=40&dropouts=30&s=5`. A still is always frame 0 of its seed, so the same link gives the same picture; Live is not mirrored in the hash. The export is named after the lines, the receiver and every setting that is not zero.
 
+## Mosh page
+
+`mosh.html` (`mosh.js`) does to a still what datamoshing does to video: it derives the instructions a video encoder would write for the step from one frame to the next, and carries them out repeatedly without ever inserting a keyframe.
+
+### Pipeline
+
+1. **Frame**: the picture, composited over white and resized so that its longest side is at most 640 or 1280 px (or left as it is).
+2. **Next frame** (not for Fall and Scatter): the frame zoomed by up to 8%, shifted by up to 3% of its longest side in the chosen direction, or turned by up to 6°, sampled without smoothing with the edges repeated; or another picture, resized to the frame.
+3. **Motion search**: for every block of 8, 16 or 32 px of the next frame, a vector to the place in the first frame it matches best, by the sum of absolute differences in brightness. The search is logarithmic, as in fast encoders: from the best position so far it tries the eight neighbors at half a block, moves while that improves the match, halves the step, and so on down to one pixel, within two blocks' distance. It gets stuck in local minima and has nothing to hold on to in flat areas, which is the point.
+   - *Fall* invents the vectors instead: each block's vector is its mean brightness times 1.5 blocks at full strength, against the chosen direction. *Scatter* gives every block a random vector of up to 1.5 blocks.
+4. **Correction**: the next frame minus the first frame moved by the vectors, per pixel and channel.
+5. **Run**: frame n + 1 is frame n with every block fetched from where its vector points (positions outside the frame repeat the edge), plus the correction times the Correction setting. At 100% frame 1 equals the next frame exactly, as in a real decoder; every later frame adds the same correction again.
+
+The vectors and the correction are cached per motion settings, and the run is kept: asking for more frames continues from the last one computed, so Play costs one frame of work per frame.
+
+### Determinism
+
+Hash: `#m=spin&strength=-60&dir=180&block=32&size=640&fix=20&s=3&f=40`. The other picture is not part of the link. The export is named `<original>_mosh_<motion>_<strength>[_dir<n>]_b<block>_f<frames>[_fix<n>][_s<seed>].png`; a recording gets the same name as a video file. On a 768 × 512 test photo Play ran at 21 frames a second in Chrome.
+
 ## Iteration / validity
 
 ### Marker protection
@@ -467,6 +486,8 @@ A JPEG that ends without an `EOI` marker (a common result of truncated downloads
 - Bend (`bend.test.js`): the Hilbert curve covers rectangles of any size in steps to a neighbor; µ-law against G.711; the picture comes back with every pedal off, for every scan and track layout; an echo's impulse response; echoes cross colors on one track only; backwards echoes come first; no pedal produces values that run away at any knob setting; the WAV header.
 
 - Signal (`signal.test.js`): the raster; the subcarrier's four samples per cycle; a clean cable returns a soft picture; stripes at the subcarrier frequency turn into color with the notch filter; a black and white set shows a flat color as dots; the color and tint knobs; vertical hold moves whole lines around a black bar; horizontal hold leans; the seed and the frame number.
+
+- Mosh (`mosh.test.js`): the search finds a known pan; nothing moves in a flat picture; with the full correction one frame equals the next frame exactly; without correction every pixel of a result is a pixel of the source; a continued run equals one started over; the invented vectors; another picture as next frame; tiny and odd sizes.
 
 - JPEG surgery (`surgery.test.js`), with the independent decoder of the crush tests (shared from `test/helpers/`): without cuts or lies the bytes equal JPEG crush's; every cut read back from the file; the header lies; a claimed size never asks for more blocks than the file holds, at every pair of real and claimed sampling; shared Huffman tables when the layout is lied about.
 
