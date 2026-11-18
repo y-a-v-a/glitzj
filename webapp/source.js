@@ -278,7 +278,7 @@ const SourceView = (() => {
 
     document.addEventListener('keydown', e => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.target.closest('input:not([type="range"]):not([type="checkbox"]), select, textarea')) return;
+      if (e.target instanceof Element && e.target.closest('input:not([type="range"]):not([type="checkbox"]), select, textarea')) return;
       const actions = {
         '[': v => rotate(v, false),
         ']': v => rotate(v, true),

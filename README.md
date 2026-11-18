@@ -209,9 +209,34 @@ A still has no frames in between, so this page makes one, and then does what a v
 - **Frames** is how many times the instructions are carried out, each time on the result of the time before. **Play** runs them one by one; **Record** saves the run as a video file.
 - **Correction** is what a codec adds for whatever the vectors cannot explain. At 0 it is thrown away. Turned all the way up, the first frame is exactly the next frame, as in a working codec, and after that the same correction is added again every frame and burns in.
 
+## The original: turn, mirror, zoom
+
+Every page has a small toolbar on the Before panel, for deciding what goes in:
+
+- **Turn** a quarter to the left or right (**[** and **]**), **mirror** left to right (**H**) or flip top to bottom (**V**).
+- **Zoom in** on a part of the picture, up to 8× (**+** and **−**), and drag the picture to move around. A zoom is a crop: the tool gets the pixels you see, at their own size, and nothing is resampled.
+- The **×** button goes back to the whole picture, the right way up.
+
+It matters more than it sounds. Most of these tools work along rows: a sort streaks sideways, an echo lands to the right, a television tears horizontally. Turn the picture a quarter and all of that runs down instead. Zoom in first and a 4000-pixel photo becomes a 500-pixel one, in which every glitch is eight times as large.
+
+Your file is never changed; the view is only a note of how to look at it. It is part of the page address, like the other settings, and it travels with the picture from page to page.
+
+The Glitch page is the exception in how it does this, since it damages the bytes of a file and not its pixels: there the picture is redrawn the way the view shows it, saved as a new JPEG or PNG, and that file is glitched. With the view untouched it glitches your file's own bytes, as it always did. A GIF cannot be turned or zoomed on that page.
+
+## Export
+
+**Export** (or **E**) saves the result as made: the file itself, byte for byte. The arrow next to it opens the options, which are remembered:
+
+- **Size**: a quarter, half, 2×, 3× or 4× of the result's size, or a width in pixels. A resized copy carries its size in its name, so it never overwrites the original export.
+- **Scaling**: **Sharp pixels** keeps every pixel a hard-edged square, which is what a glitch wants when it is enlarged. **Smooth** blends them.
+- **Format**: as made, or PNG, JPEG or WebP, with a quality for the last two.
+- **Copy** puts the picture on the clipboard, and **Share** hands the file to another app where the system offers that.
+
+Anything other than "as made" saves a rendered copy: the picture as your browser shows it. For the pages that make real files (Glitch, GIF dither, JPEG crush, JPEG surgery) that copy is worth having for its own sake. Viewers disagree about damaged JPEGs and GIFs, and a PNG of what you saw looks the same everywhere. A rendered copy of an animated GIF is a still of its first frame.
+
 ## From tool to tool
 
-The image you open follows you from page to page for as long as the tab is open, so you can try the same picture in every tool without opening it again. It is kept in your browser's own storage, tied to that tab, and nowhere else.
+The image you open follows you from page to page for as long as the tab is open, turned and zoomed the way you left it, so you can try the same picture in every tool without opening it again. It is kept in your browser's own storage, tied to that tab, and nowhere else.
 
 **Surprise me** (or the **X** key), on the seven newer tools, rolls every setting at once for a look you did not ask for. **Reset** takes you back.
 
