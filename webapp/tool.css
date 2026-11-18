@@ -314,3 +314,17 @@
     border-top: 1px dashed var(--color-border);
   }
 }
+
+/* Long select labels shrink with their column instead of spilling out of it */
+
+.controls__row > .control-group {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.controls__row .control-select {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}

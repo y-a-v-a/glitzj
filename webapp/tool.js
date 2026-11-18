@@ -182,7 +182,7 @@ function createTool(config) {
     }
     for (const key of keys) {
       const out = $(`${key}-value`);
-      if (out) out.textContent = schema[key].format ? schema[key].format(s[key], s) : s[key];
+      if (out) out.textContent = schema[key].format ? schema[key].format(s[key], s, tool) : s[key];
     }
     for (const btn of steppers) {
       const spec = schema[btn.dataset.for], value = s[btn.dataset.for];
