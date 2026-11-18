@@ -33,7 +33,8 @@ const state = {
   settings: { ...DEFAULTS },
   source: null,
   fileName: '',
-  beforeUrl: null,
+  fileNote: '',
+  fileSize: 0,
   result: null,
   afterUrl: null,
   renderQueued: false,
@@ -124,7 +125,8 @@ function writeHash() {
     if (value === DEFAULTS[key]) continue;
     p.set(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
   }
-  const hash = p.toString();
+  if (picture.param()) p.set('src', picture.param());
+  const hash = p.toString().replace(/%2C/g, ',').replace(/%40/g, '@');
   try {
     history.replaceState(null, '', hash ? `#${hash}` : location.pathname + location.search);
   } catch {}
@@ -183,7 +185,6 @@ for (const btn of document.querySelectorAll('[data-for]')) {
 
 els.btnRandom.addEventListener('click', randomSeed);
 els.btnReset.addEventListener('click', () => update({ ...DEFAULTS }));
-els.btnExport.addEventListener('click', exportGif);
 els.zoom.addEventListener('change', applyZoom);
 els.btnReuse.addEventListener('click', reuseResult);
 
@@ -195,13 +196,16 @@ document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.target.closest('input, select, textarea')) return;
   const key = e.key.toLowerCase();
-  if (key === 'e' && state.result) { e.preventDefault(); exportGif(); }
+  if (key === 'e' && state.result) { e.preventDefault(); exporter.export(); }
   if (key === 'r' && state.settings.dither === 'noise') { e.preventDefault(); randomSeed(); }
   if (key === 'z') { e.preventDefault(); els.zoom.checked = !els.zoom.checked; applyZoom(); }
 });
 
+const hashView = () => new URLSearchParams(location.hash.slice(1)).get('src');
+
 window.addEventListener('hashchange', () => {
   state.settings = readHash();
+  picture.fromParam(hashView());
   syncControls();
   scheduleRender();
 });
@@ -280,19 +284,12 @@ function loadFile(file, { own = false, restored = false } = {}) {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(img, 0, 0);
 
-    if (state.beforeUrl) URL.revokeObjectURL(state.beforeUrl);
-    state.beforeUrl = url;
-    state.source = { rgba: ctx.getImageData(0, 0, width, height).data, width, height };
+    URL.revokeObjectURL(url);
     state.fileName = file.name || 'image';
-
-    els.imgBefore.src = url;
-    els.imgBefore.hidden = false;
+    state.fileSize = file.size;
+    state.fileNote = file.type === 'image/gif' ? ' · first frame' : '';
     els.dropHint.hidden = true;
-    els.panels.style.setProperty('--ar', width / height);
-    els.beforeMeta.textContent = `${width}×${height} · ${formatBytes(file.size)}${file.type === 'image/gif' ? ' · first frame' : ''}`;
-
-    if (!restored) Handoff.save(file, state.fileName);
-    scheduleRender();
+    picture.open(file, state.fileName, { rgba: ctx.getImageData(0, 0, width, height).data, width, height }, { view: file.sourceView, keep: !restored });
   };
 
   img.onerror = () => {
@@ -302,6 +299,22 @@ function loadFile(file, { own = false, restored = false } = {}) {
 
   img.src = url;
 }
+
+// The picture as it is turned, mirrored and zoomed on the Before panel
+// (source.js). Whatever it shows is what gets rendered.
+const picture = SourceView.manage({
+  surface: els.dropZone,
+  canvas: els.imgBefore,
+  changed(shown, view) {
+    const { width, height } = shown;
+    state.source = shown;
+    els.panels.style.setProperty('--ar', width / height);
+    const how = SourceView.describe(view);
+    els.beforeMeta.textContent = `${width}×${height} · ${formatBytes(state.fileSize)}${state.fileNote}${how ? ` · ${how}` : ''}`;
+    writeHash();
+    scheduleRender();
+  },
+});
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -342,6 +355,7 @@ function render() {
     ? `Each dot covers ${result.dot}×${result.dot} pixels of the original. Exported at original size: ${width}×${height} px`
     : '';
   applyZoom();
+  exporter.sync();
 }
 
 function applyZoom() {
@@ -364,17 +378,25 @@ function exportBytes(result) {
   return state.settings.full && result.dot > 1 ? result.encode(result.dot) : result.bytes;
 }
 
-function exportGif() {
-  const { result } = state;
-  if (!result) return;
-  const bytes = exportBytes(result);
-  const url = URL.createObjectURL(new Blob([bytes], { type: 'image/gif' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = exportName();
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
-}
+// The Export button and its options (export.js). "Export at original size"
+// decides which GIF counts as the result: one pixel per dot, or every dot as a
+// block.
+const exporter = Exporter.create({
+  button: els.btnExport,
+  result() {
+    const { result } = state;
+    if (!result) return null;
+    const enlarged = state.settings.full && result.dot > 1;
+    const { width, height } = state.source;
+    return {
+      name: exportName(),
+      width: enlarged ? Math.min(width, result.width * result.dot) : result.width,
+      height: enlarged ? Math.min(height, result.height * result.dot) : result.height,
+      ext: 'gif',
+      file: async () => new Blob([exportBytes(result)], { type: 'image/gif' }),
+    };
+  },
+});
 
 function reuseResult() {
   const { result } = state;
@@ -385,6 +407,7 @@ function reuseResult() {
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 state.settings = readHash();
+picture.fromParam(hashView());
 syncControls();
 Handoff.load().then(file => {
   if (file && !state.source && !state.loadGen) loadFile(file, { own: true, restored: true });
