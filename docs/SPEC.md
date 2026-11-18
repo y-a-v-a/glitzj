@@ -247,7 +247,7 @@ Each tool is a pure module (no DOM, tested in Node) that exposes a generator, `<
 - **Controls** are bound from the markup: `data-setting` on inputs, selects and checkboxes, `data-for` + `data-step` on stepper buttons, `data-choice` + `data-value` on buttons that pick one of a list, `data-toggle` on on/off buttons, and `id="<key>-value"` for a readout.
 - **Loading** is as on the dither and crush pages: click, drop or paste, any image the browser can decode, 10 MB and 4000 × 4000 px at most, the first frame of an animation.
 - **Rendering** runs the generator in slices of about 12 ms. A render that takes longer than one slice shows its progress in the line above the result; a newer render replaces a running one. Pixels are drawn on a canvas and exported as PNG through `canvas.toBlob`; a finished file is shown in an `<img>`, so the browser's own decoder renders it.
-- **1:1**, **Reset**, **Export** (`E`), **Randomise** (`R`, where a tool has a seed) and **Feed back** behave the same on every page. The export is named `<original>_<tool>_<settings>.<ext>`.
+- **1:1**, **Reset**, **Export** (`E`), **Randomise** (`R`, where a tool has a seed) **Surprise me** (`X`) and **Feed back** behave the same on every page. Surprise me replaces all settings with a random look; each page supplies its own function for that, so a roll stays within what looks like something (a few pedals instead of all eight, small offsets instead of the full range). The export is named `<original>_<tool>_<settings>.<ext>`.
 
 `pixels.js` has the helpers the tools share: a seeded random number generator, a hash-based one for values that must be looked up by row and frame, bell-curve noise, compositing over white, and resizing (area averaging down, linear interpolation up).
 
@@ -280,7 +280,7 @@ Each tool is a pure module (no DOM, tested in Node) that exposes a generator, `<
 
 ### Verification
 
-With no cuts and no lies the output is byte for byte that of `crushJpeg` at every subsampling. Cuts are checked by reading the file back with the independent decoder of the crush tests. In Chrome 157, 450 combinations of subsampling, claimed sampling, claimed width and cuts all decoded, at the claimed size; 180 of them also in macOS ImageIO (through `sips`).
+With no cuts and no lies the output is byte for byte that of `crushJpeg` at every subsampling. Cuts are checked by reading the file back with the independent decoder of the crush tests. In Chrome 156, 450 combinations of subsampling, claimed sampling, claimed width and cuts all decoded, at the claimed size; 180 of them also in macOS ImageIO (through `sips`).
 
 ### Determinism
 

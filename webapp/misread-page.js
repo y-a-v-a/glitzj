@@ -33,6 +33,20 @@ const tool = createTool({
     if (s.swap) parts.push('swapped');
     return parts;
   },
+  surprise({ pick, between, chance }) {
+    const written = pick(FORMAT_KEYS);
+    const sameFormat = chance(0.5);
+    return {
+      written,
+      read: sameFormat ? written : pick(FORMAT_KEYS),
+      width: sameFormat || chance(0.3) ? between(-40, 40) : 0,
+      editor: chance(0.35) ? pick(MISREAD_EDITORS) : 'none',
+      skip: chance(0.2) ? between(1, 3) : 0,
+      bits: chance(0.15) ? between(1, 7) : 0,
+      reverse: chance(0.1),
+      swap: chance(0.1),
+    };
+  },
   keys(e, t) {
     if (e.target.closest('input, select')) return false;
     if (e.key === 'ArrowLeft') return t.update({ width: t.settings.width - (e.shiftKey ? 10 : 1) }), true;

@@ -43,6 +43,20 @@ const tool = createTool({
     if (usesSeed(s)) parts.push(`s${s.seed}`);
     return parts;
   },
+  surprise({ pick, between, chance, seed }) {
+    return {
+      algorithm: pick(SORT_ALGORITHMS),
+      progress: between(15, 85),
+      jitter: chance(0.3) ? between(10, 60) : 0,
+      key: chance(0.5) ? 'brightness' : pick(SORT_KEYS),
+      direction: pick(SORT_DIRECTIONS),
+      span: pick(SORT_SPANS),
+      low: between(5, 40),
+      high: between(60, 95),
+      size: between(10, 70),
+      seed: seed(),
+    };
+  },
   keys(e) {
     if (e.key.toLowerCase() !== 'p') return false;
     togglePlay();

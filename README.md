@@ -199,6 +199,8 @@ Every result is exactly what a program would show that was told the wrong thing 
 
 The image you open follows you from page to page for as long as the tab is open, so you can try the same picture in every tool without opening it again. It is kept in your browser's own storage, tied to that tab, and nowhere else.
 
+**Surprise me** (or the **X** key), on the six newer tools, rolls every setting at once for a look you did not ask for. **Reset** takes you back.
+
 **Feed back**, next to Export on every page, makes the result on screen the new source. That turns the nine tools into one chain, in any order and as long as you like, and the name of the exported file keeps the whole recipe.
 
 ## Limits

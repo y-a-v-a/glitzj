@@ -45,6 +45,22 @@ const tool = createTool({
     if (s.edge !== 'wrap') parts.push(s.edge);
     return parts;
   },
+  surprise({ pick, between, chance, seed }, t) {
+    const model = pick(Object.keys(SPLIT_MODELS));
+    const count = SPLIT_MODELS[model].planes.length;
+    const reach = Math.max(4, Math.round((t.source ? t.source.width : 800) * 0.04));
+    return {
+      model,
+      offsets: t.defaults.offsets.map((_, i) => (i < count * 2 && chance(0.7) ? between(-reach, reach) : 0)),
+      zoom: chance(0.35) ? between(-50, 50) : 0,
+      twist: chance(0.3) ? between(-40, 40) : 0,
+      tear: chance(0.5) ? between(10, 60) : 0,
+      band: between(5, 60),
+      seed: seed(),
+      edge: pick(SPLIT_EDGES),
+      wiring: chance(0.25) ? pick(SPLIT_WIRINGS) : 'straight',
+    };
+  },
   keys(e) {
     const key = e.key.toLowerCase();
     if (key === 's') return scatter(), true;

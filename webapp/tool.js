@@ -36,6 +36,10 @@
 //   data-choice="key" data-value    button that picks one of a list
 //   data-toggle="key"               button that switches a setting on or off
 //   id="<key>-value"                shows the setting's current value
+//
+// A page that gives a `surprise(dice, tool)` function gets its Surprise me
+// button wired: it returns the settings for a random look, on top of the
+// defaults.
 
 function createTool(config) {
   const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -78,6 +82,7 @@ function createTool(config) {
     btnReset:     $('btn-reset'),
     btnReuse:     $('btn-reuse'),
     btnRandom:    $('btn-randomise'),
+    btnSurprise:  $('btn-surprise'),
   };
 
   const isCanvas = els.after.tagName === 'CANVAS';
@@ -237,6 +242,20 @@ function createTool(config) {
     update({ seed: Math.floor(Math.random() * 1_000_000) });
   }
 
+  // Rolls a whole new look. The page decides what a good roll is; the shell
+  // hands it the dice.
+  const dice = {
+    pick: list => list[Math.floor(Math.random() * list.length)],
+    between: (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1)),
+    chance: p => Math.random() < p,
+    seed: () => Math.floor(Math.random() * 1_000_000),
+  };
+
+  function surprise() {
+    if (config.surprise) update({ ...defaults, ...config.surprise(dice, tool) });
+  }
+
+  if (els.btnSurprise) els.btnSurprise.addEventListener('click', surprise);
   if (els.btnRandom) els.btnRandom.addEventListener('click', randomSeed);
   els.btnReset.addEventListener('click', () => update({ ...defaults }));
   els.btnExport.addEventListener('click', exportResult);
@@ -249,6 +268,7 @@ function createTool(config) {
     const key = e.key.toLowerCase();
     if (config.keys && config.keys(e, tool)) return e.preventDefault();
     if (key === 'e' && state.result) { e.preventDefault(); exportResult(); }
+    if (key === 'x' && els.btnSurprise) { e.preventDefault(); surprise(); }
     if (key === 'r' && els.btnRandom && !els.btnRandom.closest('[hidden]')) { e.preventDefault(); randomSeed(); }
     if (key === 'z') { e.preventDefault(); els.zoom.checked = !els.zoom.checked; applyZoom(); }
   });

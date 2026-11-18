@@ -32,6 +32,27 @@ const tool = createTool({
     document.getElementById('declared-group').style.opacity = s.lie ? '' : '0.4';
     document.getElementById('seed-group').hidden = !(s.transplant || s.drift);
   },
+  surprise({ pick, between, chance, seed }) {
+    const quality = between(25, 80);
+    return {
+      quality,
+      subsampling: pick(Object.keys(SUBSAMPLING)),
+      low: chance(0.08) ? 1 : 0,
+      high: chance(0.15) ? between(2, 12) : 63,
+      shift: chance(0.2) ? between(1, 20) : 0,
+      transplant: chance(0.25) ? between(10, 70) : 0,
+      drift: chance(0.35) ? between(10, 60) : 0,
+      transpose: chance(0.3),
+      negate: chance(0.15),
+      swapColors: chance(0.2),
+      seed: seed(),
+      lie: chance(0.6),
+      declared: chance(0.75) ? between(3, quality) : between(quality, 100),
+      widen: chance(0.25) ? between(-4, 4) : 0,
+      sampling: chance(0.15) ? pick(SURGERY_SAMPLINGS) : 'honest',
+      swapTables: chance(0.15),
+    };
+  },
   nameParts(s) {
     const parts = [`q${s.quality}`, s.subsampling];
     if (s.low !== 0 || s.high !== 63) parts.push(`band${Math.min(s.low, s.high)}-${Math.max(s.low, s.high)}`);

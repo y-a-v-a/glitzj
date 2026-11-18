@@ -55,6 +55,24 @@ const tool = createTool({
     }
     return parts;
   },
+  surprise({ pick, between, chance }) {
+    const look = {
+      scan: chance(0.3) ? 'hilbert' : pick(BEND_SCANS),
+      tracks: pick(BEND_TRACKS),
+      codec: chance(0.2) ? 'ulaw' : 'linear',
+      overflow: chance(0.3) ? 'wrap' : 'clip',
+      backwards: chance(0.2),
+      filterType: pick(BEND_FILTERS),
+    };
+    for (const name of BEND_PEDALS) look[name] = false;
+    for (let n = between(1, 3); n > 0; n--) {
+      const name = pick(BEND_PEDALS);
+      look[name] = true;
+      look[`${name}A`] = name === 'speed' ? between(40, 60) : between(15, 85);
+      if (name !== 'speed') look[`${name}B`] = between(15, 85);
+    }
+    return look;
+  },
   keys(e) {
     if (e.key.toLowerCase() !== 'l') return false;
     toggleListen();

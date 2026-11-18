@@ -359,3 +359,8 @@
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+
+.btn--choice[data-choice="direction"] {
+  font-size: 1.15rem;
+  line-height: 1;
+}

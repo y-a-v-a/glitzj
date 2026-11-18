@@ -58,6 +58,26 @@ const tool = createTool({
     parts.push(`s${s.seed}`);
     return parts;
   },
+  surprise({ pick, between, chance, seed }) {
+    return {
+      lines: pick(['240', '480', '480']),
+      decoder: chance(0.6) ? 'notch' : chance(0.6) ? 'comb' : 'mono',
+      color: between(70, 160),
+      tint: chance(0.3) ? between(-60, 60) : 0,
+      noise: between(0, 45),
+      ghost: chance(0.5) ? between(10, 60) : 0,
+      hue: between(0, 40),
+      bleed: between(10, 90),
+      soft: between(0, 60),
+      jitter: chance(0.5) ? between(5, 60) : 0,
+      wobble: between(0, 50),
+      hhold: chance(0.15) ? between(-50, 50) : 0,
+      vhold: chance(0.2) ? between(3, 60) : 0,
+      tracking: chance(0.5) ? between(10, 70) : 0,
+      dropouts: between(0, 50),
+      seed: seed(),
+    };
+  },
   keys(e) {
     if (e.key.toLowerCase() !== 'l') return false;
     setLive(!live);
