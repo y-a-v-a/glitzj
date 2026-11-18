@@ -81,6 +81,7 @@ function createTool(config) {
   };
 
   const isCanvas = els.after.tagName === 'CANVAS';
+  if (!isCanvas) els.after.addEventListener('error', () => showError('The browser could not show this result.'));
   const tool = {
     els,
     extra: {},
