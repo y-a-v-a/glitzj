@@ -48,13 +48,6 @@
   margin-inline: 0.1rem;
 }
 
-/* Navigation with nine entries: let it wrap instead of pushing the page wide */
-
-.site-nav {
-  flex-wrap: wrap;
-  border-radius: 18px;
-}
-
 /* ─── Choice buttons ────────────────────────────────────────────────────── */
 
 .choices {

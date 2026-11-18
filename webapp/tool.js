@@ -447,7 +447,8 @@ function createTool(config) {
   // ── Export and feeding back ─────────────────────────────────────────────────
 
   function exportName(settings, result) {
-    const base = state.fileName.replace(/\.[^.]+$/, '') || 'image';
+    // Results fed back in carry their history in the name; keep it a file name.
+    const base = (state.fileName.replace(/\.[^.]+$/, '') || 'image').slice(0, 120);
     const parts = [base, config.slug, ...(config.nameParts ? config.nameParts(settings) : [])];
     return `${parts.filter(Boolean).join('_')}.${result.ext || 'png'}`;
   }

@@ -74,6 +74,7 @@ const els = {
   btnReset:         document.getElementById('btn-reset'),
   btnExport:        document.getElementById('btn-export'),
   btnExportLabel:   document.getElementById('btn-export-label'),
+  btnReuse:         document.getElementById('btn-reuse'),
   autoRetry:        document.getElementById('auto-retry'),
   protect:          document.getElementById('protect-markers'),
   protectToggle:    document.getElementById('protect-toggle'),
@@ -161,12 +162,18 @@ async function decodeSource(kind, bytes, img) {
   return { pngSource };
 }
 
-function loadFile(file) {
-  hideError();
+// `own` marks an image the app made itself (a result fed back in, or the image
+// carried over from another page), which may be larger than a file may be.
+// `restored` is the carried-over image: it arrives without anyone asking, so
+// it fails silently (the other pages open formats this one cannot glitch) and
+// is not stored again.
+function loadFile(file, { own = false, restored = false } = {}) {
+  if (!restored) hideError();
   const gen = ++loadGen;
+  const fail = restored ? () => {} : showError;
 
-  if (file.size > MAX_FILE_BYTES) {
-    return showError(`File too large (${formatBytes(file.size)}). Maximum is 10 MB.`);
+  if (!own && file.size > MAX_FILE_BYTES) {
+    return fail(`File too large (${formatBytes(file.size)}). Maximum is 10 MB.`);
   }
 
   const reader = new FileReader();
@@ -178,7 +185,7 @@ function loadFile(file) {
     const kind  = sniffImageType(bytes);
 
     if (!FORMATS[kind]) {
-      return showError(kind
+      return fail(kind
         ? `${kind.toUpperCase()} is not supported. Only JPEG, PNG and GIF files can be glitched.`
         : 'Only JPEG, PNG and GIF files are supported.');
     }
@@ -193,7 +200,7 @@ function loadFile(file) {
       }
       if (img.naturalWidth > MAX_DIMENSION || img.naturalHeight > MAX_DIMENSION) {
         URL.revokeObjectURL(blobUrl);
-        return showError(
+        return fail(
           `Image too large (${img.naturalWidth}×${img.naturalHeight}px). Maximum is ${MAX_DIMENSION}×${MAX_DIMENSION}px.`
         );
       }
@@ -203,7 +210,7 @@ function loadFile(file) {
         decoded = await decodeSource(kind, bytes, img);
       } catch (err) {
         URL.revokeObjectURL(blobUrl);
-        if (gen === loadGen) showError(err.message);
+        if (gen === loadGen) fail(err.message);
         return;
       }
       if (gen !== loadGen) {
@@ -226,20 +233,21 @@ function loadFile(file) {
       els.panels.style.setProperty('--ar', img.naturalWidth / img.naturalHeight);
       els.beforeMeta.textContent = describeImage(img, file);
 
+      if (!restored) Handoff.save(file, state.fileName);
       syncFormatUi();
       applyStrategies();
     };
 
     img.onerror = () => {
       URL.revokeObjectURL(blobUrl);
-      if (gen === loadGen) showError(`Could not decode the image. Is it a valid ${kind.toUpperCase()}?`);
+      if (gen === loadGen) fail(`Could not decode the image. Is it a valid ${kind.toUpperCase()}?`);
     };
 
     img.src = blobUrl;
   };
 
   reader.onerror = () => {
-    if (gen === loadGen) showError('Could not read the file.');
+    if (gen === loadGen) fail('Could not read the file.');
   };
   reader.readAsArrayBuffer(file);
 }
@@ -625,6 +633,29 @@ async function exportImage() {
 
 els.btnExport.addEventListener('click', exportImage);
 
+// Makes the result on screen the new source, here and on the other pages. A
+// PNG result is compressed first, as it is for export.
+async function reuseResult() {
+  const result = state.after;
+  if (els.btnReuse.disabled || !result) return;
+  const format = FORMATS[outputFormat()] || FORMATS.png;
+  let blob;
+  if (canPack(result)) {
+    clearTimeout(packTimer);
+    const job = state.packed?.result === result ? state.packed : startPack(result);
+    job.exporting = true;
+    els.btnReuse.disabled = true;
+    const bytes = await job.promise || encodePng(result.source.png, result.raw);
+    blob = new Blob([bytes], { type: FORMATS.png.mime });
+  } else {
+    blob = await (await fetch(result.url)).blob();
+    blob = new Blob([blob], { type: format.mime });
+  }
+  loadFile(new File([blob], result.name, { type: blob.type }), { own: true });
+}
+
+els.btnReuse.addEventListener('click', reuseResult);
+
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 
 document.addEventListener('keydown', e => {
@@ -644,6 +675,7 @@ function showAfter(mode, result = null, meta = '') {
   els.afterBroken.hidden      = mode !== 'broken';
   els.imgAfter.hidden         = mode !== 'image';
   els.btnExport.disabled      = mode !== 'image' || state.exporting;
+  els.btnReuse.disabled       = mode !== 'image';
   els.afterMeta.textContent   = meta;
 
   if (mode === 'image') {
@@ -773,3 +805,6 @@ readHash();
 syncControls();
 syncFormatUi();
 writeHash();
+Handoff.load().then(file => {
+  if (file && !state.originalBytes && !loadGen) loadFile(file, { own: true, restored: true });
+});
