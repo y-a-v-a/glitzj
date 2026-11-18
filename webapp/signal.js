@@ -270,9 +270,9 @@ function* signalFrame(encoded, settings, frame = 0) {
         b = y - 1.106 * i + 1.703 * q;
       }
       const o = o0 + x * 4;
-      out[o] = r * 255 + 0.5;
-      out[o + 1] = g * 255 + 0.5;
-      out[o + 2] = b * 255 + 0.5;
+      out[o] = r * 255;
+      out[o + 1] = g * 255;
+      out[o + 2] = b * 255;
       out[o + 3] = 255;
     }
 

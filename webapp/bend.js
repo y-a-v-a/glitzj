@@ -233,7 +233,7 @@ function bendEchoDelay(knob, line) {
 function pedalEcho(x, a, b, line) {
   const delay = bendEchoDelay(a, line);
   const feedback = (b / 100) * 0.92;
-  for (let i = delay; i < x.length; i++) x[i] = (1 - feedback) * x[i] + feedback * x[i - delay];
+  for (let i = 0; i < x.length; i++) x[i] = (1 - feedback) * x[i] + (i < delay ? 0 : feedback * x[i - delay]);
 }
 
 // Reverb: the classic Schroeder room, four echoes of unrelated lengths side by

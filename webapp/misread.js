@@ -217,7 +217,13 @@ function misreadShift(bytes, { skip = 0, bits = 0, reverse = false, swap = false
 // ── Reading ───────────────────────────────────────────────────────────────────
 
 function misreadHeight(length, width, format, maxHeight = MISREAD_MAX_HEIGHT) {
-  const rows = Math.ceil(length / (width * MISREAD_FORMATS[format].bpp));
+  let rows = Math.ceil(length / (width * MISREAD_FORMATS[format].bpp));
+  if (format === 'i420') {
+    // The color planes follow the brightness plane, so the reader has to
+    // settle on a height the data can fill completely.
+    const size = h => width * h + 2 * Math.ceil(width / 2) * Math.ceil(h / 2);
+    while (rows > 1 && size(rows) > length) rows--;
+  }
   return Math.max(1, Math.min(maxHeight, rows));
 }
 
@@ -232,7 +238,7 @@ function misreadRead(bytes, width, format, maxHeight = MISREAD_MAX_HEIGHT) {
   };
   const putYuv = (p, y, u, v) => {
     const cb = u - 128, cr = v - 128;
-    put(p, y + 1.402 * cr + 0.5, y - 0.344136 * cb - 0.714136 * cr + 0.5, y + 1.772 * cb + 0.5);
+    put(p, y + 1.402 * cr, y - 0.344136 * cb - 0.714136 * cr, y + 1.772 * cb);
   };
 
   switch (format) {

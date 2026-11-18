@@ -105,6 +105,6 @@ function resizePixels(rgba, width, height, outWidth, outHeight) {
   const wide = pass(rgba, width, height, outWidth, 4, true);
   const tall = pass(wide, outWidth, height, outHeight, 4, false);
   const out = new Uint8ClampedArray(outWidth * outHeight * 4);
-  for (let i = 0; i < out.length; i++) out[i] = tall[i] + 0.5;
+  out.set(tall);   // a clamped array rounds to the nearest whole number itself
   return out;
 }

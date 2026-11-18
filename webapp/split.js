@@ -62,14 +62,14 @@ function stackPlanes(planes, model, out, from, to) {
       out[i + 2] = planes[2][p];
     } else if (model === 'cmyk') {
       const paper = 255 - planes[3][p];
-      out[i] = (255 - planes[0][p]) * paper / 255 + 0.5;
-      out[i + 1] = (255 - planes[1][p]) * paper / 255 + 0.5;
-      out[i + 2] = (255 - planes[2][p]) * paper / 255 + 0.5;
+      out[i] = (255 - planes[0][p]) * paper / 255;
+      out[i + 1] = (255 - planes[1][p]) * paper / 255;
+      out[i + 2] = (255 - planes[2][p]) * paper / 255;
     } else {
       const y = planes[0][p], cb = planes[1][p] - 128, cr = planes[2][p] - 128;
-      out[i] = y + 1.402 * cr + 0.5;
-      out[i + 1] = y - 0.344136 * cb - 0.714136 * cr + 0.5;
-      out[i + 2] = y + 1.772 * cb + 0.5;
+      out[i] = y + 1.402 * cr;
+      out[i + 1] = y - 0.344136 * cb - 0.714136 * cr;
+      out[i + 2] = y + 1.772 * cb;
     }
   }
 }
