@@ -337,3 +337,27 @@
   height: 30px;
   font-size: 0.75rem;
 }
+
+/* ─── Signal: live and record ───────────────────────────────────────────── */
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+}
+
+.btn[aria-pressed="true"] .live-dot {
+  background: var(--color-live);
+  box-shadow: 0 0 8px var(--color-live);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.btn.is-recording {
+  border-color: var(--color-broken);
+  color: var(--color-broken);
+}
+
+.panel--after.is-live.is-busy .panel__image--tool {
+  opacity: 1;
+}

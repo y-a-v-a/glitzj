@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Glitzj Signal</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23101014'/%3E%3Crect x='6' y='8' width='20' height='4' fill='%2300e5ff'/%3E%3Crect x='9' y='14' width='20' height='4' fill='%23ff2e88'/%3E%3Crect x='4' y='20' width='16' height='4' fill='%23f2f2f5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="gif.css">
+  <link rel="stylesheet" href="tool.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <h1 class="site-title" data-text="glitzj">glitzj</h1>
+      <p class="site-tagline">please stand by</p>
+    </div>
+    <nav class="site-nav" aria-label="Modes">
+      <a class="site-nav__link" href="index.html">Glitch</a>
+      <a class="site-nav__link" href="gif.html">GIF dither</a>
+      <a class="site-nav__link" href="crush.html">JPEG crush</a>
+      <a class="site-nav__link" href="surgery.html">JPEG surgery</a>
+      <a class="site-nav__link" href="split.html">Split</a>
+      <a class="site-nav__link" href="sort.html">Sort</a>
+      <a class="site-nav__link" href="bend.html">Bend</a>
+      <a class="site-nav__link" href="misread.html">Misread</a>
+      <a class="site-nav__link" href="signal.html" aria-current="page">Signal</a>
+    </nav>
+    <ul class="site-badges" aria-label="About this tool">
+      <li class="badge"><span class="badge__dot" aria-hidden="true"></span>Runs in your browser, nothing is uploaded</li>
+    </ul>
+  </header>
+
+  <main class="app">
+    <div class="panels" id="panels">
+      <div class="panel panel--before">
+        <div class="panel__header">
+          <span class="panel__label"><span class="panel__index" aria-hidden="true">01</span>Before</span>
+          <span class="panel__meta" id="before-meta"></span>
+        </div>
+        <div class="panel__frame">
+          <div class="panel__surface" id="drop-zone" tabindex="0" role="button" aria-label="Open an image file">
+            <div class="panel__hint panel__hint--drop" id="drop-hint">
+              <svg class="drop-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M24 31V9m0 0-8 8m8-8 8 8" />
+                <path d="M8 29v8a3 3 0 0 0 3 3h26a3 3 0 0 0 3-3v-8" />
+              </svg>
+              <p>Drop an image here, paste one,<br>or click to open</p>
+              <p class="panel__hint-small">up to 10 MB and 4000 × 4000 px</p>
+            </div>
+            <img class="panel__image" id="img-before" alt="Original image" hidden>
+            <span class="panel__replace" aria-hidden="true">Click or drop to replace</span>
+            <input type="file" id="file-input" accept="image/*" hidden>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel--after" id="panel-after">
+        <div class="panel__header">
+          <span class="panel__label">
+            <span class="panel__index" aria-hidden="true">02</span>Received
+            <span class="signal" aria-hidden="true"></span>
+          </span>
+          <span class="panel__meta" id="after-meta"></span>
+          <label class="panel__zoom" title="Show the result at the size of its scan lines (Z)">
+            <input type="checkbox" id="zoom">
+            1:1
+          </label>
+        </div>
+        <div class="panel__frame">
+          <div class="panel__surface" id="after-surface">
+            <div class="panel__hint panel__hint--nosignal" id="after-placeholder">
+              <div class="test-card" aria-hidden="true"></div>
+              <p class="nosignal__box">
+                <span class="nosignal__title">No signal</span>
+                <span class="nosignal__sub nosignal__sub--empty">Open an image to start</span>
+              </p>
+            </div>
+            <span class="panel__stage" id="stage"><canvas class="panel__image panel__image--tool" id="img-after" role="img" aria-label="Picture after transmission as a composite video signal" hidden></canvas></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="error" id="error" role="alert" hidden></p>
+
+    <section class="controls controls--dither" id="controls" aria-label="Signal controls">
+      <div class="controls__section">
+        <h2 class="controls__heading">Set</h2>
+        <div class="controls__row">
+          <div class="control-group" id="lines-group">
+            <label class="control-label" for="lines" title="How many scan lines carry the picture. The result has this many rows; a picture with fewer keeps its own">Lines</label>
+            <select class="control-input control-select" id="lines" data-setting="lines">
+              <option value="240">240</option>
+              <option value="480">480</option>
+              <option value="720">720</option>
+              <option value="source">As the picture</option>
+            </select>
+          </div>
+        </div>
+        <div class="choices" role="group" aria-label="Receiver">
+          <button class="btn btn--choice" type="button" data-choice="decoder" data-value="notch" title="The cheap set: a filter cuts the color wave out of the brightness. Fine detail that looks like the wave turns into rainbows, and color edges leave crawling dots">Notch filter</button>
+          <button class="btn btn--choice" type="button" data-choice="decoder" data-value="comb" title="The expensive set: compares each line with the one above. Sharper, no rainbows on vertical stripes, but dots hang under every color edge">Comb filter</button>
+          <button class="btn btn--choice" type="button" data-choice="decoder" data-value="mono" title="A set that knows nothing of color shows the color wave as what it is: a fine pattern of dots wherever the picture is colorful">Black and white</button>
+        </div>
+        <div class="controls__row">
+          <div class="control-group control-group--wide control-group--colors" id="color-group">
+            <label class="control-label" for="color" title="The color knob: how much the set makes of the color wave">Color</label>
+            <input class="control-range" type="range" id="color" data-setting="color" min="0" max="200" value="100">
+            <span class="control-value" id="color-value">100</span>
+          </div>
+          <div class="control-group control-group--wide control-group--colors" id="tint-group">
+            <label class="control-label" for="tint" title="The tint knob: turns every hue around the color wheel by shifting the reference the color is measured against">Tint</label>
+            <input class="control-range" type="range" id="tint" data-setting="tint" min="-180" max="180" value="0">
+            <span class="control-value" id="tint-value">0</span>
+          </div>
+        </div>
+      </div>
+      <div class="controls__section">
+        <h2 class="controls__heading">Reception</h2>
+        <div class="controls__row">
+          <div class="control-group control-group--wide control-group--colors" id="noise-group">
+            <label class="control-label" for="noise" title="A weak signal. Noise in the brightness is snow; the part of it that looks like the color wave comes out as colored sparks">Snow</label>
+            <input class="control-range" type="range" id="noise" data-setting="noise" min="0" max="100" value="12">
+            <span class="control-value" id="noise-value">12</span>
+          </div>
+          <div class="control-group control-group--wide control-group--colors" id="ghost-group">
+            <label class="control-label" for="ghost" title="The signal arrives twice, once straight and once off a building, a little later. The late copy has its color wave shifted, so the ghost has the wrong colors">Ghost</label>
+            <input class="control-range" type="range" id="ghost" data-setting="ghost" min="0" max="100" value="15">
+            <span class="control-value" id="ghost-value">15</span>
+          </div>
+          <div class="control-group control-group--wide control-group--colors" id="hue-group">
+            <label class="control-label" for="hue" title="The reference for the color drifts from line to line, so each line gets a slightly different tint">Hue drift</label>
+            <input class="control-range" type="range" id="hue" data-setting="hue" min="0" max="100" value="10">
+            <span class="control-value" id="hue-value">10</span>
+          </div>
+          <div class="control-group control-group--wide control-group--colors" id="bleed-group">
+            <label class="control-label" for="bleed" title="How slowly the color follows the picture. Turned up, color smears to the right of where it belongs">Bleed</label>
+            <input class="control-range" type="range" id="bleed" data-setting="bleed" min="0" max="100" value="40">
+            <span class="control-value" id="bleed-value">40</span>
+          </div>
+          <div class="control-group control-group--wide control-group--colors" id="soft-group">
+            <label class="control-label" for="soft" title="How slowly the brightness follows the picture">Soft</label>
+            <input class="control-range" type="range" id="soft" data-setting="soft" min="0" max="100" value="30">
+            <span class="control-value" id="soft-value">30</span>
+          </div>
+        </div>
+      </div>
+      <div class="controls__section">
+        <h2 class="controls__heading">Hold and tape</h2>
+        <div class="controls__row">
+          <div class="control-group control-group--wide control-group--colors" id="jitter-group">
+            <label class="control-label" for="jitter" title="Lines start a little early or late, and now and then one jumps">Jitter</label>
+            <input class="control-range" type="range" id="jitter" data-setting="jitter" min="0" max="100" value="8">
+            <span class="control-value" id="jitter-value">8</span>
+          </div>
+          <div class="control-group control-group--wide control-group--colors" id="wobble-group">
+            <label class="control-label" for="wobble" title="Slow sideways swaying of a stretched tape, with the top of the frame bending over">Wobble</label>
+            <input class="control-range" type="range" id="wobble" data-setting="wobble" min="0" max="100" value="10">
+            <span class="control-value" id="wobble-value">10</span>
+          </div>
+          <div class="control-group control-group--wide control-group--colors" id="hhold-group">
+            <label class="control-label" for="hhold" title="The horizontal hold knob, turned too far: the set no longer knows where a line starts, so the picture leans over and the gap between lines shows as a dark bar">H-hold</label>
+            <input class="control-range" type="range" id="hhold" data-setting="hhold" min="-100" max="100" value="0">
+            <span class="control-value" id="hhold-value">0</span>
+          </div>
+          <div class="control-group control-group--wide control-group--colors" id="vhold-group">
+            <label class="control-label" for="vhold" title="The vertical hold knob: the picture slips upward and the gap between frames shows as a bar. With Live on, it rolls">V-hold</label>
+            <input class="control-range" type="range" id="vhold" data-setting="vhold" min="0" max="100" value="0">
+            <span class="control-value" id="vhold-value">0</span>
+          </div>
+          <div class="control-group control-group--wide control-group--colors" id="tracking-group">
+            <label class="control-label" for="tracking" title="A video recorder losing the track: a band of torn, noisy, colorless lines, and a ragged strip at the bottom where it switches heads">Tracking</label>
+            <input class="control-range" type="range" id="tracking" data-setting="tracking" min="0" max="100" value="15">
+            <span class="control-value" id="tracking-value">15</span>
+          </div>
+          <div class="control-group control-group--wide control-group--colors" id="dropouts-group">
+            <label class="control-label" for="dropouts" title="Specks of missing tape: white dashes with a fading tail">Dropouts</label>
+            <input class="control-range" type="range" id="dropouts" data-setting="dropouts" min="0" max="100" value="10">
+            <span class="control-value" id="dropouts-value">10</span>
+          </div>
+          <div class="control-group" id="seed-group">
+            <label class="control-label" for="seed" title="Rerolls the noise, the jumps and where the tape trouble sits">Seed</label>
+            <input class="control-input control-input--seed" type="number" id="seed" data-setting="seed" min="0" max="2147483647" value="1">
+            <button class="btn btn--secondary" id="btn-randomise" type="button" title="Pick a random seed (R)">
+              <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="5.5" cy="5.5" r="1.1"/><circle cx="10.5" cy="10.5" r="1.1"/><circle cx="8" cy="8" r="1.1"/></svg>
+              Randomise
+              <kbd class="kbd" aria-hidden="true">R</kbd>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls__section controls__actions">
+        <div class="controls__toggles"></div>
+        <div class="controls__buttons">
+          <button class="btn btn--secondary" id="btn-reset">
+            <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v3h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Reset
+          </button>
+          <button class="btn btn--secondary" id="btn-live" type="button" aria-pressed="false" title="Receive frame after frame: the snow moves, the dots crawl, what has lost its hold rolls (L)">
+            <span class="live-dot" aria-hidden="true"></span>
+            Live
+            <kbd class="kbd" aria-hidden="true">L</kbd>
+          </button>
+          <button class="btn btn--secondary" id="btn-record" type="button" disabled title="Record the moving picture as a video file">
+            <span id="record-label">Record</span>
+          </button>
+          <button class="btn btn--secondary" id="btn-reuse" disabled title="Make this result the new source, to break it again here or in another tool">
+            <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 6H5.5a3 3 0 0 0 0 6H8M13 6l-3-3m3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Feed back
+          </button>
+          <button class="btn btn--primary" id="btn-export" disabled title="Download the result (E)">
+            <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Export PNG
+            <kbd class="kbd" aria-hidden="true">E</kbd>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>© 2026 Vincent Bruijn</span>
+    <span class="site-footer__keys"><kbd class="kbd">L</kbd> live <kbd class="kbd">R</kbd> random seed <kbd class="kbd">Z</kbd> 1:1 <kbd class="kbd">E</kbd> export · paste an image anywhere</span>
+  </footer>
+
+  <script src="handoff.js"></script>
+  <script src="tool.js"></script>
+  <script src="pixels.js"></script>
+  <script src="signal.js"></script>
+  <script src="signal-page.js"></script>
+</body>
+</html>
