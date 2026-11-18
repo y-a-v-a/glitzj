@@ -2,7 +2,7 @@
   "name": "glitzj",
   "version": "1.0.0",
   "private": true,
-  "description": "Browser-based JPEG, PNG and GIF glitch tool, GIF ditherer and JPEG crusher. No build step; open webapp/index.html.",
+  "description": "Browser-based workshop for breaking images on purpose: byte glitching, dithering, JPEG crushing and surgery, channel splitting, interrupted pixel sorting, databending through audio effects, misreading raw data and analog video. No build step; open webapp/index.html.",
   "scripts": {
     "test": "node --test test/**/*.test.js"
   }

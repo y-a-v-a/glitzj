@@ -1,6 +1,22 @@
 # Glitzj
 
-A glitch tool for JPEG, PNG and GIF images that runs entirely in your browser. Nothing is uploaded; your photos never leave your machine.
+A workshop for breaking images on purpose, running entirely in your browser. Nothing is uploaded; your photos never leave your machine.
+
+It started as a glitch tool for JPEG, PNG and GIF files and grew into nine tools. None of them paints an effect on top of a picture. Each one takes a real mechanism (a file format, a sorting algorithm, a printing press, a tape recorder, a television) and uses it wrongly, so what you see is what that mechanism does when it goes wrong.
+
+| | |
+|---|---|
+| **Glitch** | damage the bytes of a JPEG, PNG or GIF and keep the file valid |
+| **GIF dither** | redraw a picture in a handful of colors and shape the dots |
+| **JPEG crush** | compress down to quality 0, again and again |
+| **JPEG surgery** | operate on the numbers inside a JPEG, then lie in its header |
+| **Split** | pull the color planes of a picture apart with your hands |
+| **Sort** | run a sorting algorithm over the pixels and pull the plug halfway |
+| **Bend** | play the picture through audio effects, and listen to it |
+| **Misread** | read the right bytes with the wrong width, format or alignment |
+| **Signal** | send the picture as analog television and receive it badly |
+
+An image you open in one tool is there in the next, and every result can be fed back in as a new source, so the tools chain: sort it, send it through the television, crush what arrives.
 
 **Try it at [y-a-v-a.github.io/glitzj](https://y-a-v-a.github.io/glitzj/).**
 
@@ -101,9 +117,95 @@ The third page, **JPEG crush** (`crush.html`), does not glitch either. It compre
 
 Transparent pixels are composited over white, since JPEG has no transparency. The panel shows the file size, the bits per pixel and the size as a share of the original file; hover it for the quantization steps. Settings are mirrored in the page address, and the export name lists them.
 
+## JPEG surgery
+
+**JPEG surgery** (`surgery.html`) opens a JPEG up instead of hitting it from outside. A JPEG does not store pixels: it cuts the picture into blocks of 8 × 8, describes each block as a mix of 64 wave patterns, from flat to a fine checkerboard, and stores how much of each pattern the block holds, divided by a table of step sizes. That table travels in the file's header, next to the picture's size and the way its color was shrunk, and a decoder believes all of it. So there are two things to do here: **cut** the numbers, and **lie** in the header. The result is always a correct JPEG that any viewer opens without complaint; it shows exactly what the file tells it to.
+
+Cuts:
+
+- **Coarsest** and **Finest** drop the patterns outside a range. With Coarsest at 1 every block loses its average, and only edges are left on gray. With Finest at 0 every block is one flat color.
+- **Shift** moves every pattern a number of places toward the fine end: soft shading turns into stripes and checks.
+- **Transplant** gives a share of the blocks the patterns of a random other block. Each block keeps its own average, so the picture stays where it is and only its texture moves.
+- **Drift** uses the fact that a JPEG stores each block's average as the difference from the block before it, so one wrong value shifts everything after it. This is the banding the Glitch page produces by accident, here on purpose and under control.
+- **Mirror blocks** mirrors every block along its diagonal while the blocks stay in place. **Invert detail** turns the detail of every block inside out. **Swap color channels** stores the two color signals in each other's place.
+
+Lies:
+
+- **Lie about the quality** writes step sizes for another quality into the header than the ones the picture was divided by. Claim a lower quality than the truth and the decoder multiplies everything by too much: contrast and color explode. Claim a higher one and the picture fades to gray.
+- **Claimed width** says the picture is a few blocks wider or narrower than it is, so the decoder breaks the rows in the wrong place and the picture leans over, in steps of whole blocks. The claimed height is adjusted so the file still holds enough data.
+- **Claimed color** names another color resolution than the real one. The decoder then deals the blocks out wrongly: brightness blocks are read as color and color as brightness.
+- **Swap the step tables** hands the decoder the color step sizes for the brightness, and the other way around.
+
+With no cuts and no lies the file is byte for byte what JPEG crush makes. In tests Chrome and the macOS image decoder opened every combination tried.
+
+## Split
+
+**Split** (`split.html`) treats a color picture as what it is: several pictures stacked on top of each other, which only look like one while they stay exactly aligned. It takes them apart, moves each on its own and stacks them again.
+
+- **RGB**, **CMYK** or **YCbCr** chooses what the picture is taken apart into: three lights as on a screen, four inks as on a printing press, or one brightness and two color signals as in video. A light that is missing leaves the picture dark, an ink that is missing shows the paper, and a color signal that has moved colors the wrong part of the picture.
+- Pick a plane and **drag the picture** on the right to move it. The arrow keys nudge it one pixel, ten with Shift; double-click a plane to put it back. **Scatter** throws every plane somewhere else, **Align** puts them all back.
+- **Zoom** makes the first plane smaller and the last one larger, so they agree in the middle and drift apart toward the edges, like a cheap lens. **Twist** turns them against each other.
+- **Tear** cuts the picture into horizontal bands and pushes about half of them sideways, every plane by its own amount. **Band** sets how tall the bands are.
+- **Wiring** plugs each plane into another's place: the red picture into the green light, the black plate into the cyan ink.
+- **Edges** decides what shows where a moved plane no longer covers the picture: it wraps around, smears its last pixel, or is left blank.
+
+Planes are moved without smoothing, so a pixel stays a pixel however far it travels.
+
+## Sort
+
+**Sort** (`sort.html`) does pixel sorting, with a twist. Putting the pixels of every row in order of brightness turns a photo into streaks, and a finished sort looks the same whichever algorithm did the work. A sort that is stopped halfway does not: every algorithm leaves its own kind of mess. So this page runs real sorting algorithms and pulls the plug.
+
+- **Bubble** drags bright pixels along the line like wet paint. **Insertion** has finished the first part of each span and not looked at the rest. **Selection** has put the darkest pixels in place and thrown whatever stood there to wherever they came from. **Quick** has split everything into darker and lighter, again and again, with a jumble inside every part. **Merge** leaves a comb of small gradients. **Shell** weaves several half-sorted copies of the picture into each other. **Heap** lays the pixels out as the tree it is building. **Radix** has carefully sorted by the lowest bits only, the least meaningful part of every pixel. **Bogo** shuffles and hopes.
+- **Progress** is how far the algorithm got. At 100 it finished, and every algorithm gives the same picture. **Unevenly** stops every line at a different moment. **Play** runs the sort from start to finish while you watch.
+- **Sort by** brightness, hue, saturation, one color, or the number itself: the pixel as the single value it is stored as. The arrows set the direction.
+- **Sort** runs within a brightness range (pixels outside the range stay put and end a span), random chunks, or whole lines.
+
+Bubble sort would take far too long done literally, so it is computed in a way that gives exactly the result of that many passes; the tests check it against a literal bubble sort.
+
+## Bend
+
+**Bend** (`bend.html`) is the oldest trick in databending: open a picture in a sound editor as if it were a recording, run it through audio effects, and save it as a picture again. Here the picture becomes one long tape of samples, the tape goes through a pedalboard, and comes back as pixels. An echo in sound is a ghost in the picture, a filter that rings leaves ripples beside every edge, and a tape that runs a little fast tilts the whole frame.
+
+- The tape runs along **Rows**, **Back and forth**, down **Columns**, or along a **Hilbert curve**, a line that winds through the whole picture so that what is close on the tape is close in the picture. The same echo that lands to the right in a row scan spreads in blocks along the curve.
+- **One track** puts red, green and blue in turn on a single track, as in a raw image file. An echo that is not a whole number of pixels long then lands on the wrong color, which is where the rainbows come from. **Three tracks** gives every color its own.
+- **Imported as** 8-bit PCM or µ-law, the telephone encoding in which white is silence and mid gray is the loudest sound there is, so the same pedals do something else entirely. **Too loud** decides whether samples that no longer fit are clipped or wrap around. **Play backwards** runs the tape through the pedals from the end, so echoes come before the thing they echo.
+- Eight pedals, each with a switch and one or two knobs: **Speed**, **Drive**, **Crush**, **Filter**, **Phaser**, **Vibrato**, **Echo** and **Reverb**. They are ordinary textbook audio effects, applied in that order.
+- **Listen** plays the tape, with a marker on the picture showing where the sound is. Turn the knobs while it plays. **Export WAV** saves the tape as sound.
+
+## Misread
+
+**Misread** (`misread.html`) has no randomness and no effects. A picture file without its header is a long row of bytes that mean nothing by themselves: the width, the order of the colors and the number of bits per pixel are an agreement between whoever wrote the bytes and whoever reads them. This page writes the picture down correctly and then breaks the agreement.
+
+- **Written as** and **Read as** choose from nine formats, among them RGB, RGBA, 16-bit RGB, one bit per pixel, planar RGB and the YUV layouts video uses. Write RGB and read RGBA, and every pixel swallows a byte of the next one.
+- **Width** is how wide the reader believes the picture is. One pixel off and every row starts one pixel late, which tilts the picture; further off and it falls apart into stripes. The arrow keys step it, **0** returns to the right width.
+- **Then saved by** passes the bytes through a text editor on the way, which is what actually happens to binary files that get opened as text: an editor that writes Windows line endings adds a byte before every byte that happens to be a line feed; an editor that expects UTF-8 replaces every byte that is not valid text with three others; a conversion from Latin-1 doubles every byte above 127. Editors that make the data longer push everything after each change further along.
+- **Skip bytes** and **Shift bits** start reading late, by whole bytes or by single bits. **Bits backwards** reads every byte lowest bit first. **Swap byte pairs** is what a machine with the other byte order would do.
+
+Every result is exactly what a program would show that was told the wrong thing about the same bytes.
+
+## Signal
+
+**Signal** (`signal.html`) sends the picture as analog color television. That system puts a whole picture on one wire as a single wavering voltage: brightness is the voltage itself, and color rides on top as a small fast wave whose height says how strong the color is and whose timing says which color. The receiver has to pull the two apart again and never quite can. The rainbows on a striped shirt, the dots crawling along a color edge and the hue that smears to the right are not drawn on here. The page builds the signal (NTSC), damages it, and receives it the way a television does; the artifacts are what a correct receiver makes of a signal that is slightly wrong.
+
+- **Lines** is how many scan lines carry the picture: 240, 480, 720, or as many as the picture has rows. The result has that many rows.
+- Three receivers. **Notch filter** is the cheap set: fine detail turns into rainbows. **Comb filter** compares each line with the one above: sharper, but dots hang under every color edge. **Black and white** knows nothing of color and shows the color wave as what it is, a fine pattern of dots wherever the picture is colorful.
+- **Color** and **Tint** are the knobs a television had.
+- **Snow** is a weak signal. **Ghost** is the signal arriving twice, the second time off a building; the late copy has the wrong colors because its color wave arrives shifted. **Hue drift**, **Bleed** and **Soft** are a receiver that follows the signal sloppily.
+- **Jitter** and **Wobble** move lines sideways. **H-hold** and **V-hold** are the hold knobs turned too far: the picture leans over or rolls, and the gaps between lines and between frames show as dark bars.
+- **Tracking** and **Dropouts** are a video recorder with a worn tape: a band of torn, colorless lines, a ragged strip at the bottom, white dashes.
+- **Live** receives frame after frame: the snow moves, the dots crawl, whatever has lost its hold rolls. **Record** saves the moving picture as a video file.
+
+## From tool to tool
+
+The image you open follows you from page to page for as long as the tab is open, so you can try the same picture in every tool without opening it again. It is kept in your browser's own storage, tied to that tab, and nowhere else.
+
+**Feed back**, next to Export on every page, makes the result on screen the new source. That turns the nine tools into one chain, in any order and as long as you like, and the name of the exported file keeps the whole recipe.
+
 ## Limits
 
-JPEG, PNG and GIF, up to 10 MB and 4000 × 4000 pixels; for PNG the unpacked picture data may be at most 64 MB, which a 16-bit 4000 × 4000 image exceeds, and a GIF's frames may add up to at most 200 million pixels. Animated PNGs are glitched as a still of their first frame; animated GIFs keep all their frames. Very large files would freeze the page.
+The Glitch page opens JPEG, PNG and GIF; the other pages open any image your browser can show. All of them accept up to 10 MB and 4000 × 4000 pixels. On the Glitch page, for PNG the unpacked picture data may be at most 64 MB, which a 16-bit 4000 × 4000 image exceeds, and a GIF's frames may add up to at most 200 million pixels. Animated PNGs are glitched as a still of their first frame; animated GIFs keep all their frames. Very large files would freeze the page.
+
+The pixel tools work on the whole picture at its real size and show their progress when that takes a moment. Signal works at the number of lines you choose, and Misread can give a result of another size than the source: at most 4000 pixels wide and four times as tall as the picture.
 
 ## Running it
 

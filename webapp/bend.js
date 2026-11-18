@@ -25,6 +25,7 @@ const BEND_TRACKS = ['one', 'three'];
 const BEND_CODECS = ['linear', 'ulaw'];
 const BEND_OVERFLOWS = ['clip', 'wrap'];
 const BEND_FILTERS = ['low', 'high', 'band'];
+const BEND_KEEP_TAPE = 6_000_000;      // pixels up to which the unbent tape is kept
 const BEND_PEDALS = ['speed', 'drive', 'crush', 'filter', 'phaser', 'vibrato', 'echo', 'reverb'];
 
 // ── Scan orders ───────────────────────────────────────────────────────────────
@@ -314,15 +315,25 @@ function* bendSteps(source, settings) {
   const line = bendLine(width, height, s);
   const active = BEND_PEDALS.filter(name => s[name]);
 
-  // One track holds all three colors in turn; three tracks hold one each.
+  // One track holds all three colors in turn; three tracks hold one each. The
+  // tape as it comes off the picture is kept for the next turn of a knob,
+  // unless the picture is so large that a second copy is better not held.
   const one = s.tracks === 'one';
-  const tracks = one ? [new Float32Array(n * 3)] : [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
-  for (let k = 0; k < n; k++) {
-    const i = (order ? order[k] : k) * 4;
-    for (let ch = 0; ch < 3; ch++) {
-      const v = byteToSample(rgba[i + ch], s.codec);
-      if (one) tracks[0][k * 3 + ch] = v; else tracks[ch][k] = v;
+  const tapeKey = `${s.scan}/${s.tracks}/${s.codec}`;
+  let tracks;
+  if (cache.tape && cache.tape.key === tapeKey) {
+    tracks = cache.tape.tracks.map(track => Float32Array.from(track));
+  } else {
+    cache.tape = null;
+    tracks = one ? [new Float32Array(n * 3)] : [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+    for (let k = 0; k < n; k++) {
+      const i = (order ? order[k] : k) * 4;
+      for (let ch = 0; ch < 3; ch++) {
+        const v = byteToSample(rgba[i + ch], s.codec);
+        if (one) tracks[0][k * 3 + ch] = v; else tracks[ch][k] = v;
+      }
     }
+    if (n <= BEND_KEEP_TAPE) cache.tape = { key: tapeKey, tracks: tracks.map(track => Float32Array.from(track)) };
   }
   yield 0.1;
 

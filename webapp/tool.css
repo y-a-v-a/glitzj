@@ -354,3 +354,8 @@
 .panel--after.is-live.is-busy .panel__image--tool {
   opacity: 1;
 }
+
+.controls__buttons {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
