@@ -55,6 +55,11 @@ test('a copy is never larger than a browser can make', () => {
   assert.ok(!E.plan(png, { size: '400' }).limited);
 });
 
+test('a result without a size still gets a plan of at least one pixel', () => {
+  const planned = E.plan({ width: 0, height: 0, ext: 'png' }, { size: '200' });
+  assert.deepEqual([planned.width, planned.height], [1, 1]);
+});
+
 test('a resized copy carries its size in its name, and every copy the right extension', () => {
   assert.equal(E.fileName('cat_split_rgb.png', E.plan(png, { size: '200' })), 'cat_split_rgb_1600x1200.png');
   assert.equal(E.fileName('cat_crush_q0_420.jpg', E.plan(jpg, { format: 'png' })), 'cat_crush_q0_420.png');

@@ -35,12 +35,16 @@ const SourceView = (() => {
   function sanitize(view) {
     const v = view || {};
     const int = (n, fallback) => (Number.isFinite(Number(n)) ? Math.round(Number(n)) : fallback);
+    const zoom = clamp(int(v.zoom, 100), 100, MAX_ZOOM);
+    // The visible part cannot stick out of the picture, so its middle stays
+    // half its own size away from the edges: exactly in the middle at 100%.
+    const edge = 50000 / zoom;
     return {
       turns: ((int(v.turns, 0) % 4) + 4) % 4,
       mirror: Boolean(v.mirror),
-      zoom: clamp(int(v.zoom, 100), 100, MAX_ZOOM),
-      cx: clamp(int(v.cx, 500), 0, 1000),
-      cy: clamp(int(v.cy, 500), 0, 1000),
+      zoom,
+      cx: clamp(int(v.cx, 500), Math.ceil(edge), Math.floor(1000 - edge)),
+      cy: clamp(int(v.cy, 500), Math.ceil(edge), Math.floor(1000 - edge)),
     };
   }
 
@@ -216,7 +220,10 @@ const SourceView = (() => {
 
     // The panel opens a file when it is clicked or when Enter is pressed on
     // it; neither should happen for the toolbar inside it.
-    for (const type of ['click', 'keydown', 'pointerdown']) bar.addEventListener(type, e => e.stopPropagation());
+    // (Other keys pass through, so the page's shortcuts keep working while a
+    // toolbar button has the focus.)
+    for (const type of ['click', 'pointerdown']) bar.addEventListener(type, e => e.stopPropagation());
+    bar.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); });
     surface.append(bar);
 
     function change(action) {
@@ -288,7 +295,7 @@ const SourceView = (() => {
         '=': v => zoomStep(v, 1),
         '-': v => zoomStep(v, -1),
       };
-      const action = actions[e.key.toLowerCase()];
+      const action = actions[(e.key || '').toLowerCase()];
       if (!action || !get() || enabled()) return;
       e.preventDefault();
       change(action);
@@ -308,10 +315,17 @@ const SourceView = (() => {
   function manage({ surface, canvas, changed }) {
     let file = null, name = '', original = null, view = identity(), pending = null, storeTimer = 0;
 
-    function store() {
+    // A new picture is stored at once. Changes of view come in bursts while
+    // dragging, so they are stored a moment after the last one, or when the
+    // page is left.
+    function store(soon = false) {
       clearTimeout(storeTimer);
-      storeTimer = setTimeout(() => { if (file) Handoff.save(file, name, encode(view)); }, 300);
+      storeTimer = 0;
+      const write = () => { storeTimer = 0; if (file) Handoff.save(file, name, encode(view)); };
+      if (soon) storeTimer = setTimeout(write, 300);
+      else write();
     }
+    window.addEventListener('pagehide', () => { if (storeTimer) store(); });
 
     function apply() {
       const shown = pixels(original.rgba, original.width, original.height, view);
@@ -329,7 +343,7 @@ const SourceView = (() => {
       set(next) {
         view = next;
         apply();
-        store();
+        store(true);
       },
     });
 
@@ -341,10 +355,13 @@ const SourceView = (() => {
         file = newFile;
         name = newName;
         original = picture;
+        // `keep: false` is a picture that is already stored as it is, unless a
+        // view from the address now replaces the one it was stored with.
+        const fromAddress = pending;
         view = pending || (given ? decode(given) : identity());
         pending = null;
         apply();
-        if (keep) store();
+        if (keep || fromAddress) store();
       },
       // A view from the page address: for the picture that is open, or else
       // for the first one that will be.
@@ -354,7 +371,7 @@ const SourceView = (() => {
         if (encode(next) === encode(view)) return;
         view = next;
         apply();
-        store();
+        store(true);
       },
       param: () => encode(original ? view : pending),
       get view() { return view; },

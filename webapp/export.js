@@ -54,8 +54,8 @@ const Exporter = (() => {
   function plan(result, options) {
     const o = sanitize(options);
     let width = o.size === 'custom' ? o.width : Math.round(result.width * Number(o.size) / 100);
-    width = Math.max(1, width);
-    let height = Math.max(1, Math.round(width * result.height / result.width));
+    width = Math.max(1, width || 1);
+    let height = Math.max(1, Math.round(width * result.height / result.width) || 1);
 
     let limited = false;
     const shrink = Math.min(1, MAX_SIDE / width, MAX_SIDE / height, Math.sqrt(MAX_AREA / (width * height)));
@@ -368,7 +368,13 @@ const Exporter = (() => {
     });
 
     // The page enables and disables its Export button; the arrow follows.
-    const follow = () => { more.disabled = button.disabled; if (button.disabled) setOpen(false); };
+    // (A page may disable the button for the moment an export takes; that is
+    // no reason to close the menu the export was started from.)
+    const follow = () => {
+      const busy = button.getAttribute('aria-busy') === 'true';
+      more.disabled = button.disabled && !busy;
+      if (button.disabled && !busy) setOpen(false);
+    };
     new MutationObserver(follow).observe(button, { attributes: true, attributeFilter: ['disabled'] });
     follow();
     sync();

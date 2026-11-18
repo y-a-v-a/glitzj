@@ -117,7 +117,8 @@ test('zoom steps up and down a fixed ladder; dragging moves by a share of what i
 
   const zoomed = V.zoomTo(V.identity(), 400);
   assert.deepEqual([V.pan(zoomed, 1, 0).cx, V.pan(zoomed, 0, -1).cy], [750, 250], 'one screen to the right is a quarter of the picture at 4×');
-  assert.equal(V.pan(zoomed, 99, 0).cx, 1000);
+  assert.equal(V.pan(zoomed, 99, 0).cx, 875, 'and no further than the edge: the middle of the last screenful');
+  assert.equal(V.pan(V.pan(zoomed, 99, 0), -0.4, 0).cx, 775, 'so a drag back moves at once');
 });
 
 test('a view survives being written into the page address', () => {
@@ -125,11 +126,11 @@ test('a view survives being written into the page address', () => {
   assert.equal(V.encode({ turns: 1 }), '1');
   assert.equal(V.encode({ turns: 3, mirror: true }), '3m');
   assert.equal(V.encode({ turns: 0, zoom: 200, cx: 250, cy: 500 }), '0@200,250,500');
-  for (const view of [{ turns: 2, mirror: true, zoom: 600, cx: 12, cy: 987 }, { turns: 1, mirror: false, zoom: 100, cx: 500, cy: 500 }, { turns: 0, mirror: true, zoom: 150, cx: 0, cy: 1000 }]) {
+  for (const view of [{ turns: 2, mirror: true, zoom: 600, cx: 112, cy: 887 }, { turns: 1, mirror: false, zoom: 100, cx: 500, cy: 500 }, { turns: 0, mirror: true, zoom: 150, cx: 400, cy: 600 }]) {
     assert.deepEqual(V.decode(V.encode(view)), V.sanitize(view));
   }
   for (const junk of ['', 'x', '9', '1@', '1@200', '2m@a,b,c', null, undefined, '1m@200,5,5,5']) assert.deepEqual(V.decode(junk), V.identity(), String(junk));
-  assert.deepEqual(V.decode('1@99999,5000,0'), { turns: 1, mirror: false, zoom: 800, cx: 1000, cy: 0 }, 'values out of range are pulled in');
+  assert.deepEqual(V.decode('1@99999,5000,0'), { turns: 1, mirror: false, zoom: 800, cx: 937, cy: 63 }, 'values out of range are pulled in');
   assert.deepEqual(V.sanitize({ turns: -1, zoom: 'abc', cx: NaN }), { turns: 3, mirror: false, zoom: 100, cx: 500, cy: 500 });
 });
 

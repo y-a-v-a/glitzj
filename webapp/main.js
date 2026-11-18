@@ -170,6 +170,7 @@ async function decodeSource(kind, bytes, img) {
 // it (see "Turning, mirroring and zooming the source" below).
 function loadFile(file, { own = false, restored = false, baked = false } = {}) {
   if (!restored) hideError();
+  if (!baked) opened.loads++;
   const gen = ++loadGen;
   const fail = restored ? () => {} : showError;
 
@@ -240,9 +241,12 @@ function loadFile(file, { own = false, restored = false, baked = false } = {}) {
         opened.name   = state.fileName;
         opened.kind   = kind;
         opened.pixels = null;
-        opened.view   = opened.pending || SourceView.decode(file.sourceView);
+        // A GIF is glitched as it is, so it takes no view, not even one that
+        // came along from another page or the address.
+        const fromAddress = kind !== 'gif' && opened.pending;
+        opened.view   = kind === 'gif' ? SourceView.identity() : opened.pending || SourceView.decode(file.sourceView);
         opened.pending = null;
-        if (!restored) storeOpened();
+        if (!restored || fromAddress) storeOpened(false);
       }
       sourceBar.sync();
       syncFormatUi();
@@ -329,7 +333,7 @@ function hideError() {
 // can be changed or undone, and with the view untouched the bytes that are
 // glitched are the file's own.
 
-const opened = { file: null, name: '', kind: null, pixels: null, view: SourceView.identity(), pending: null, baking: false, again: false, storeTimer: 0 };
+const opened = { file: null, name: '', kind: null, pixels: null, view: SourceView.identity(), pending: null, loads: 0, baking: false, again: false, storeTimer: 0 };
 
 function viewLocked() {
   return state.format === 'gif'
@@ -348,12 +352,20 @@ const sourceBar = SourceView.attach({
   enabled: viewLocked,
 });
 
-function storeOpened() {
+// A newly opened file is stored at once; changes of view a moment after the
+// last one, or when the page is left.
+function storeOpened(soon = true) {
   clearTimeout(opened.storeTimer);
-  opened.storeTimer = setTimeout(() => {
+  opened.storeTimer = 0;
+  const write = () => {
+    opened.storeTimer = 0;
     if (opened.file) Handoff.save(opened.file, opened.name, SourceView.encode(opened.view));
-  }, 300);
+  };
+  if (soon) opened.storeTimer = setTimeout(write, 300);
+  else write();
 }
+
+window.addEventListener('pagehide', () => { if (opened.storeTimer) storeOpened(false); });
 
 // The pixels of the opened file, as the browser draws it; decoded once.
 function openedPixels() {
@@ -393,8 +405,9 @@ async function bakeView() {
   try {
     do {
       opened.again = false;
-      const { file, view, name, kind } = opened;
+      const { file, view, name, kind, loads } = opened;
       if (SourceView.isIdentity(view)) {
+        opened.pixels = null;                       // not needed until the next turn or zoom
         loadFile(file, { own: true, baked: true });
         continue;
       }
@@ -406,7 +419,8 @@ async function bakeView() {
       canvas.getContext('2d').putImageData(new ImageData(shown.rgba, shown.width, shown.height), 0, 0);
       const mime = kind === 'jpeg' ? FORMATS.jpeg.mime : FORMATS.png.mime;
       const blob = await new Promise(resolve => canvas.toBlob(resolve, mime, 0.95));
-      if (file !== opened.file) continue;           // another file was opened meanwhile
+      // Another file was opened meanwhile, and may still be loading: it wins.
+      if (loads !== opened.loads || file !== opened.file) continue;
       if (!blob) throw new Error('Could not redraw the image.');
       if (!opened.again) loadFile(new File([blob], name, { type: mime }), { own: true, baked: true });
     } while (opened.again);
@@ -702,7 +716,7 @@ function setExporting(on) {
 // here, unless that was already done while it sat on screen. Everything needed
 // travels with the result, which may still belong to the previous file or
 // settings while a new render is pending.
-async function resultBlob(result) {
+async function resultBlob(result, { quiet = false } = {}) {
   if (!canPack(result)) return (await fetch(result.url)).blob();
 
   let job = state.packed?.result === result ? state.packed : null;
@@ -710,14 +724,14 @@ async function resultBlob(result) {
   if (!bytes) {
     clearTimeout(packTimer);
     if (job) job.exporting = true;
-    setExporting(true);
+    if (!quiet) setExporting(true);
     try {
       await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
       job ||= startPack(result);
       job.exporting = true;
       bytes = await job.promise;
     } finally {
-      setExporting(false);
+      if (!quiet) setExporting(false);
     }
   }
   // If compressing failed, the uncompressed preview encoding is still a valid
@@ -733,8 +747,8 @@ const exporter = Exporter.create({
     if (!result || els.imgAfter.hidden) return null;
     return {
       name: result.name,
-      width: els.imgAfter.naturalWidth || 1,
-      height: els.imgAfter.naturalHeight || 1,
+      width: result.width || 1,
+      height: result.height || 1,
       ext: result.name.split('.').pop(),
       file: () => resultBlob(result),
       animated: isAnimatedGif(),
@@ -747,7 +761,7 @@ async function reuseResult() {
   const result = state.after;
   if (els.btnReuse.disabled || !result) return;
   els.btnReuse.disabled = true;
-  const blob = await resultBlob(result);
+  const blob = await resultBlob(result, { quiet: true });
   const mime = (FORMATS[outputFormat()] || FORMATS.png).mime;
   loadFile(new File([blob], result.name, { type: blob.type || mime }), { own: true });
 }
@@ -882,7 +896,7 @@ function renderAttempt(gen, seed, attempt) {
     }
     const retried = attempt > 0 ? `seed ${seed} after ${attempt} ${attempt === 1 ? 'retry' : 'retries'}` : '';
     const meta = [retried, cut].filter(Boolean).join(' · ');
-    showAfter('image', { url, name, raw, source }, meta);
+    showAfter('image', { url, name, raw, source, width: probe.naturalWidth, height: probe.naturalHeight }, meta);
   };
 
   probe.onerror = () => {
