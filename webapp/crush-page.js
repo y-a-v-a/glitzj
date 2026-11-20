@@ -18,7 +18,7 @@ const state = {
   source: null,
   fileName: '',
   fileSize: 0,
-  beforeUrl: null,
+  fileNote: '',
   result: null,
   afterUrl: null,
   job: 0,
@@ -97,7 +97,8 @@ function writeHash() {
     if (value === DEFAULTS[key]) continue;
     p.set(short, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
   }
-  const hash = p.toString();
+  if (picture.param()) p.set('src', picture.param());
+  const hash = p.toString().replace(/%2C/g, ',').replace(/%40/g, '@');
   try {
     history.replaceState(null, '', hash ? `#${hash}` : location.pathname + location.search);
   } catch {}
@@ -153,7 +154,6 @@ for (const btn of document.querySelectorAll('[data-for]')) {
 }
 
 els.btnReset.addEventListener('click', () => update({ ...DEFAULTS }));
-els.btnExport.addEventListener('click', exportJpeg);
 els.zoom.addEventListener('change', applyZoom);
 els.btnReuse.addEventListener('click', reuseResult);
 
@@ -161,13 +161,16 @@ document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.target.closest('input, select, textarea')) return;
   const key = e.key.toLowerCase();
-  if (key === 'e' && state.result) { e.preventDefault(); exportJpeg(); }
+  if (key === 'e' && state.result) { e.preventDefault(); exporter.export(); }
   if (key === '0') { e.preventDefault(); update({ quality: 0 }); }
   if (key === 'z') { e.preventDefault(); els.zoom.checked = !els.zoom.checked; applyZoom(); }
 });
 
+const hashView = () => new URLSearchParams(location.hash.slice(1)).get('src');
+
 window.addEventListener('hashchange', () => {
   state.settings = readHash();
+  picture.fromParam(hashView());
   syncControls();
   scheduleRender();
 });
@@ -246,20 +249,12 @@ function loadFile(file, { own = false, restored = false } = {}) {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(img, 0, 0);
 
-    if (state.beforeUrl) URL.revokeObjectURL(state.beforeUrl);
-    state.beforeUrl = url;
-    state.source = { rgba: ctx.getImageData(0, 0, width, height).data, width, height };
+    URL.revokeObjectURL(url);
     state.fileName = file.name || 'image';
     state.fileSize = file.size;
-
-    els.imgBefore.src = url;
-    els.imgBefore.hidden = false;
+    state.fileNote = file.type === 'image/gif' ? ' · first frame' : '';
     els.dropHint.hidden = true;
-    els.panels.style.setProperty('--ar', width / height);
-    els.beforeMeta.textContent = `${width}×${height} · ${formatBytes(file.size)}${file.type === 'image/gif' ? ' · first frame' : ''}`;
-
-    if (!restored) Handoff.save(file, state.fileName);
-    scheduleRender();
+    picture.open(file, state.fileName, { rgba: ctx.getImageData(0, 0, width, height).data, width, height }, { view: file.sourceView, keep: !restored });
   };
 
   img.onerror = () => {
@@ -269,6 +264,22 @@ function loadFile(file, { own = false, restored = false } = {}) {
 
   img.src = url;
 }
+
+// The picture as it is turned, mirrored and zoomed on the Before panel
+// (source.js). Whatever it shows is what gets rendered.
+const picture = SourceView.manage({
+  surface: els.dropZone,
+  canvas: els.imgBefore,
+  changed(shown, view) {
+    const { width, height } = shown;
+    state.source = shown;
+    els.panels.style.setProperty('--ar', width / height);
+    const how = SourceView.describe(view);
+    els.beforeMeta.textContent = `${width}×${height} · ${formatBytes(state.fileSize)}${state.fileNote}${how ? ` · ${how}` : ''}`;
+    writeHash();
+    scheduleRender();
+  },
+});
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -336,6 +347,7 @@ function show(result, settings) {
   };
   els.afterMeta.title = `Quantization steps: detail ${steps(result.quant[0])}, color ${steps(result.quant[1])} (255 is the most a baseline JPEG allows)`;
   applyZoom();
+  exporter.sync();
 }
 
 function applyZoom() {
@@ -355,16 +367,21 @@ function exportName(s) {
   return `${parts.join('_')}.jpg`;
 }
 
-function exportJpeg() {
-  const { result } = state;
-  if (!result) return;
-  const url = URL.createObjectURL(new Blob([result.bytes], { type: 'image/jpeg' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = result.name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
-}
+// The Export button and its options (export.js).
+const exporter = Exporter.create({
+  button: els.btnExport,
+  result() {
+    const { result } = state;
+    if (!result) return null;
+    return {
+      name: result.name,
+      width: result.width,
+      height: result.height,
+      ext: 'jpg',
+      file: async () => new Blob([result.bytes], { type: 'image/jpeg' }),
+    };
+  },
+});
 
 function reuseResult() {
   const { result } = state;
@@ -375,6 +392,7 @@ function reuseResult() {
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 state.settings = readHash();
+picture.fromParam(hashView());
 syncControls();
 Handoff.load().then(file => {
   if (file && !state.source && !state.loadGen) loadFile(file, { own: true, restored: true });

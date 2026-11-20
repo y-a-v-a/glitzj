@@ -245,8 +245,8 @@ Each tool is a pure module (no DOM, tested in Node) that exposes a generator, `<
 
 - **Settings** are declared once, each with a default and either a range of whole numbers, a list of choices, a boolean, or a list of whole numbers. From that one description the shell sanitizes values, mirrors them in the hash (defaults left out) and wires the controls.
 - **Controls** are bound from the markup: `data-setting` on inputs, selects and checkboxes, `data-for` + `data-step` on stepper buttons, `data-choice` + `data-value` on buttons that pick one of a list, `data-toggle` on on/off buttons, and `id="<key>-value"` for a readout.
-- **Loading** is as on the dither and crush pages: click, drop or paste, any image the browser can decode, 10 MB and 4000 × 4000 px at most, the first frame of an animation.
-- **Rendering** runs the generator in slices of about 12 ms. A render that takes longer than one slice shows its progress in the line above the result; a newer render replaces a running one. Pixels are drawn on a canvas and exported as PNG through `canvas.toBlob`; a finished file is shown in an `<img>`, so the browser's own decoder renders it.
+- **Loading** is as on the dither and crush pages: click, drop or paste, any image the browser can decode, 10 MB and 4000 × 4000 px at most, the first frame of an animation. The picture then goes through the [source view](#source-view) before the tool sees it.
+- **Rendering** runs the generator in slices of about 12 ms. A render that takes longer than one slice shows its progress in the line above the result; a newer render replaces a running one. Pixels are drawn on a canvas; a finished file is shown in an `<img>`, so the browser's own decoder renders it. Saving either is the work of [Export](#export).
 - **1:1**, **Reset**, **Export** (`E`), **Randomise** (`R`, where a tool has a seed) **Surprise me** (`X`) and **Feed back** behave the same on every page. Surprise me replaces all settings with a random look; each page supplies its own function for that, so a roll stays within what looks like something (a few pedals instead of all eight, small offsets instead of the full range). The export is named `<original>_<tool>_<settings>.<ext>`.
 
 `pixels.js` has the helpers the tools share: a seeded random number generator, a hash-based one for values that must be looked up by row and frame, bell-curve noise, compositing over white, and resizing (area averaging down, linear interpolation up).
@@ -256,6 +256,30 @@ Each tool is a pure module (no DOM, tested in Node) that exposes a generator, `<
 `handoff.js` keeps the image the page is working on in IndexedDB (database `glitzj`), so it is there when another page of the app is opened. Every tab stores its image under an id of its own, made up once and kept in `sessionStorage`: navigating within a tab carries the image along, a new tab starts empty, and two tabs never see each other's image. A closed tab cannot remove its record, so each save also removes records of other tabs that are more than a day old. Every page stores the file it opened and, on start, loads the stored one if nothing else has been opened. A carried-over image skips the 10 MB limit (it may be the result of a tool) and fails silently where a page cannot use it: the Glitch page ignores anything that is not a JPEG, PNG or GIF. Where storage is unavailable nothing is kept and nothing breaks.
 
 **Feed back** hands the result on screen to the page's own `loadFile` as a file named like the export, which also stores it for the other pages. On the Glitch page a PNG result is compressed first, as for export.
+
+### Source view
+
+`source.js` lets every page work on the opened picture turned, mirrored and zoomed, without changing the file. A view is `{ turns, mirror, zoom, cx, cy }`: quarter turns clockwise (0–3), a mirror left to right applied after turning, a zoom in percent (100–800, in the steps 100, 150, 200, 300, 400, 600, 800 from the buttons), and the middle of the visible part in thousandths of the turned picture's width and height. Turns and the mirror together are the eight orientations of a rectangle, so flipping top to bottom is stored as a mirror and a half turn.
+
+- **Buttons act on what is on screen.** Turning clockwise turns the shown picture clockwise even when it is mirrored (the stored turn then goes the other way), and the middle of a zoomed view is carried along, so the part being looked at stays the part being looked at. The tests check every button from all eight orientations against literal pixel-by-pixel turns and flips.
+- **A zoom is a crop.** The visible rectangle is `round(size × 100 / zoom)` pixels in each direction, at least one, placed around the middle and pushed back inside the picture where it would stick out. The page gets exactly those pixels; nothing is resampled. An untouched view hands back the original pixel array, not a copy.
+- **Toolbar**: turn left and right, mirror, flip, zoom out and in, and back to the whole picture; `[`, `]`, `H`, `V`, `+`, `−`. While zoomed, dragging the Before picture moves the visible part by the share of it that the pointer travelled; a drag does not count as the click that opens a file.
+- **In the address**: `src=<turns>[m][@<zoom>,<cx>,<cy>]`, for example `src=1`, `src=3m`, `src=0@200,250,500`; left out for an untouched view. A view in the address applies to the picture that is open, or to the first one opened after the page loads. A file the user opens later starts untouched, and so does a result that is fed back.
+- **Hand-off**: the view is stored next to the picture, so the next page shows it the same way.
+
+On the pixel pages (the seven tools, GIF dither and JPEG crush) `SourceView.manage` holds the decoded picture and its view, draws what the view shows on the Before panel, which is a canvas there, and calls the page with the pixels whenever either changes. The line above the picture gives the size of what is shown and how it is turned.
+
+The Glitch page works on the bytes of a file, so it cannot apply a view to pixels on the way in. It keeps the file as opened and, for any view other than the untouched one, draws the picture as the view shows it, encodes that with `canvas.toBlob` (JPEG at quality 0.95 for a JPEG, otherwise PNG, which comes out as 8-bit RGBA) and loads the result as the file to glitch. While one such file is being made, further changes only ask for another round, so dragging a zoomed picture does not queue up work. Going back to the untouched view loads the opened file again, so its own bytes are glitched, as before. For a GIF the toolbar is off: it is glitched frame by frame as the file it is.
+
+### Export
+
+`export.js` takes over the Export button of every page. A page describes its result as `{ name, width, height, ext, file(), image?, animated? }`; `file()` returns the result as made, `image` is a canvas that already holds it.
+
+- **Options** (kept in `localStorage`, not in the address): size as 25, 50, 100, 200, 300 or 400% or a width in pixels; sharp or smooth scaling; format as made, PNG, JPEG or WebP; a quality for JPEG and WebP.
+- **Plan**: the target size keeps the shape of the result and is at least one pixel each way; it is shrunk to fit 16384 px a side and 120 million pixels, which the menu then says. If the size is the result's own and the format is the result's own (or "as made"), the file from `file()` is saved untouched and the name is exactly what it was before these options existed. Otherwise a copy is rendered: the result is drawn (from `image`, or by decoding the file as the page does to show it) onto a canvas of the target size, with smoothing off for sharp scaling, over white for JPEG, and encoded with `canvas.toBlob`. A resized copy with the format "as made" stays a JPEG if the result was one and is otherwise a PNG; browsers cannot write GIF. If the browser cannot write the format asked for and returns a PNG, the name follows.
+- **Names**: a resized copy gets `_<width>x<height>` before the extension.
+- **Copy** renders a PNG at the chosen size onto the clipboard (handed over as a promise so that it still counts as the result of the click). **Share** is shown where `navigator.canShare` accepts files.
+- A rendered copy of an animated GIF is its first frame; the menu says so.
 
 ## JPEG surgery page
 
@@ -488,6 +512,10 @@ A JPEG that ends without an `EOI` marker (a common result of truncated downloads
 - Signal (`signal.test.js`): the raster; the subcarrier's four samples per cycle; a clean cable returns a soft picture; stripes at the subcarrier frequency turn into color with the notch filter; a black and white set shows a flat color as dots; the color and tint knobs; vertical hold moves whole lines around a black bar; horizontal hold leans; the seed and the frame number.
 
 - Mosh (`mosh.test.js`): the search finds a known pan; nothing moves in a flat picture; with the full correction one frame equals the next frame exactly; without correction every pixel of a result is a pixel of the source; a continued run equals one started over; the invented vectors; another picture as next frame; tiny and odd sizes.
+
+- Source view (`source.test.js`): every button from all eight orientations against literal turns and flips; four quarter turns and double flips return to the start; a zoom is exactly a crop; turning a zoomed view keeps the same part in view; the address form and junk in it; one-pixel-wide pictures.
+
+- Export (`export.test.js`): the default saves the result itself under its old name; sizes keep the shape; when a copy is rendered and in which format; the limits; names; remembered options are checked.
 
 - JPEG surgery (`surgery.test.js`), with the independent decoder of the crush tests (shared from `test/helpers/`): without cuts or lies the bytes equal JPEG crush's; every cut read back from the file; the header lies; a claimed size never asks for more blocks than the file holds, at every pair of real and claimed sampling; shared Huffman tables when the layout is lied about.
 

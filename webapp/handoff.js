@@ -45,9 +45,10 @@ const Handoff = (() => {
 
   // Stores the image the page now works on, in place of this tab's previous
   // one. `blob` is the file as it was opened, or a result that was fed back
-  // as the new source. A closed tab cannot clean up after itself, so images
+  // as the new source; `view` is how it is turned, mirrored and zoomed (see
+  // source.js), as text. A closed tab cannot clean up after itself, so images
   // that other tabs left behind more than a day ago are removed here.
-  async function save(blob, name) {
+  async function save(blob, name, view = '') {
     try {
       const id = tabId(true);
       const now = Date.now();
@@ -59,19 +60,22 @@ const Handoff = (() => {
           if (cursor.key !== id && !(now - cursor.value.time < KEEP_MS)) cursor.delete();
           cursor.continue();
         };
-        return store.put({ blob, name: name || 'image', time: now }, id);
+        return store.put({ blob, name: name || 'image', view, time: now }, id);
       });
     } catch {}
   }
 
-  // The image this tab stored last, as a File, or null.
+  // The image this tab stored last, as a File with its view in `sourceView`,
+  // or null.
   async function load() {
     try {
       const id = tabId(false);
       if (!id) return null;
       const record = await request('readonly', store => store.get(id));
       if (!record || !(record.blob instanceof Blob)) return null;
-      return new File([record.blob], record.name, { type: record.blob.type });
+      const file = new File([record.blob], record.name, { type: record.blob.type });
+      file.sourceView = typeof record.view === 'string' ? record.view : '';
+      return file;
     } catch {
       return null;
     }

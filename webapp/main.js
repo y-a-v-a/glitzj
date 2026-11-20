@@ -166,9 +166,11 @@ async function decodeSource(kind, bytes, img) {
 // carried over from another page), which may be larger than a file may be.
 // `restored` is the carried-over image: it arrives without anyone asking, so
 // it fails silently (the other pages open formats this one cannot glitch) and
-// is not stored again.
-function loadFile(file, { own = false, restored = false } = {}) {
+// is not stored again. `baked` is the opened file redrawn the way its view shows
+// it (see "Turning, mirroring and zooming the source" below).
+function loadFile(file, { own = false, restored = false, baked = false } = {}) {
   if (!restored) hideError();
+  if (!baked) opened.loads++;
   const gen = ++loadGen;
   const fail = restored ? () => {} : showError;
 
@@ -231,11 +233,25 @@ function loadFile(file, { own = false, restored = false } = {}) {
       els.imgBefore.hidden = false;
       els.dropHint.hidden  = true;
       els.panels.style.setProperty('--ar', img.naturalWidth / img.naturalHeight);
-      els.beforeMeta.textContent = describeImage(img, file);
+      const how = baked ? SourceView.describe(opened.view) : '';
+      els.beforeMeta.textContent = describeImage(img, file) + (how ? ` · ${how}` : '');
 
-      if (!restored) Handoff.save(file, state.fileName);
+      if (!baked) {
+        opened.file   = file;
+        opened.name   = state.fileName;
+        opened.kind   = kind;
+        opened.pixels = null;
+        // A GIF is glitched as it is, so it takes no view, not even one that
+        // came along from another page or the address.
+        const fromAddress = kind !== 'gif' && opened.pending;
+        opened.view   = kind === 'gif' ? SourceView.identity() : opened.pending || SourceView.decode(file.sourceView);
+        opened.pending = null;
+        if (!restored || fromAddress) storeOpened(false);
+      }
+      sourceBar.sync();
       syncFormatUi();
       applyStrategies();
+      if (!baked && kind !== 'gif' && !SourceView.isIdentity(opened.view)) bakeView();
     };
 
     img.onerror = () => {
@@ -307,6 +323,112 @@ function showError(message) {
 function hideError() {
   els.error.hidden = true;
   els.error.textContent = '';
+}
+
+// ── Turning, mirroring and zooming the source ────────────────────────────────
+// This page damages the bytes of a file, so a view cannot be applied to the
+// pixels on the way in, as the other pages do. Instead the picture is drawn
+// the way the view shows it and saved as a new file of the same kind, and that
+// file is what gets glitched. The file as it was opened is kept, so the view
+// can be changed or undone, and with the view untouched the bytes that are
+// glitched are the file's own.
+
+const opened = { file: null, name: '', kind: null, pixels: null, view: SourceView.identity(), pending: null, loads: 0, baking: false, again: false, storeTimer: 0 };
+
+function viewLocked() {
+  return state.format === 'gif'
+    ? 'A GIF is glitched as the file it is, frame by frame, so it cannot be turned or cropped on this page'
+    : '';
+}
+
+const sourceBar = SourceView.attach({
+  surface: els.dropZone,
+  get: () => (opened.file && state.originalBytes ? opened.view : null),
+  set(view) {
+    opened.view = view;
+    bakeView();
+    storeOpened();
+  },
+  enabled: viewLocked,
+});
+
+// A newly opened file is stored at once; changes of view a moment after the
+// last one, or when the page is left.
+function storeOpened(soon = true) {
+  clearTimeout(opened.storeTimer);
+  opened.storeTimer = 0;
+  const write = () => {
+    opened.storeTimer = 0;
+    if (opened.file) Handoff.save(opened.file, opened.name, SourceView.encode(opened.view));
+  };
+  if (soon) opened.storeTimer = setTimeout(write, 300);
+  else write();
+}
+
+window.addEventListener('pagehide', () => { if (opened.storeTimer) storeOpened(false); });
+
+// The pixels of the opened file, as the browser draws it; decoded once.
+function openedPixels() {
+  if (opened.pixels) return Promise.resolve(opened.pixels);
+  const file = opened.file;
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width  = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      const pixels = { rgba: ctx.getImageData(0, 0, canvas.width, canvas.height).data, width: canvas.width, height: canvas.height };
+      if (file === opened.file) opened.pixels = pixels;
+      resolve(pixels);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not decode the image.'));
+    };
+    img.src = url;
+  });
+}
+
+// Makes the file the view describes and loads it. While one is being made,
+// further changes (dragging a zoomed picture sends many) only ask for another
+// round, so the last view always wins and no work piles up.
+async function bakeView() {
+  if (opened.baking) {
+    opened.again = true;
+    return;
+  }
+  opened.baking = true;
+  try {
+    do {
+      opened.again = false;
+      const { file, view, name, kind, loads } = opened;
+      if (SourceView.isIdentity(view)) {
+        opened.pixels = null;                       // not needed until the next turn or zoom
+        loadFile(file, { own: true, baked: true });
+        continue;
+      }
+      const full  = await openedPixels();
+      const shown = SourceView.pixels(full.rgba, full.width, full.height, view);
+      const canvas = document.createElement('canvas');
+      canvas.width  = shown.width;
+      canvas.height = shown.height;
+      canvas.getContext('2d').putImageData(new ImageData(shown.rgba, shown.width, shown.height), 0, 0);
+      const mime = kind === 'jpeg' ? FORMATS.jpeg.mime : FORMATS.png.mime;
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, mime, 0.95));
+      // Another file was opened meanwhile, and may still be loading: it wins.
+      if (loads !== opened.loads || file !== opened.file) continue;
+      if (!blob) throw new Error('Could not redraw the image.');
+      if (!opened.again) loadFile(new File([blob], name, { type: mime }), { own: true, baked: true });
+    } while (opened.again);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    opened.baking = false;
+  }
 }
 
 // ── Format-specific controls ──────────────────────────────────────────────────
@@ -382,8 +504,10 @@ function writeHash() {
   if (!state.protect) p.set('raw', '1');
   if (!state.keepAlpha) p.set('alpha', '0');
   if (state.asPng) p.set('png', '1');
+  const src = SourceView.encode(opened.file ? opened.view : opened.pending);
+  if (src) p.set('src', src);
   if (state.steady) p.set('steady', '1');
-  const hash = p.toString();
+  const hash = p.toString().replace(/%2C/g, ',').replace(/%40/g, '@');
   try {
     history.replaceState(null, '', hash ? `#${hash}` : location.pathname + location.search);
   } catch {
@@ -410,6 +534,9 @@ function readHash() {
   state.keepAlpha = p.get('alpha') !== '0';
   state.asPng     = p.get('png') === '1';
   state.steady    = p.get('steady') === '1';
+
+  const view = SourceView.decode(p.get('src'));
+  opened.pending = SourceView.isIdentity(view) ? null : view;
 }
 
 function syncIntensity() {
@@ -549,19 +676,6 @@ function exportName(seed) {
   return `${base}_glitzj_${fx}_i${state.intensity}_s${seed}${filter}${raw}${alpha}${steady}.${FORMATS[outputFormat()].ext}`;
 }
 
-function download(href, name) {
-  const a = document.createElement('a');
-  a.href     = href;
-  a.download = name;
-  a.click();
-}
-
-function downloadBytes(bytes, name) {
-  const url = URL.createObjectURL(new Blob([bytes], { type: FORMATS.png.mime }));
-  download(url, name);
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
-}
-
 // PNG previews are stored uncompressed so they render quickly. A compressed
 // copy for export is prepared once a result has stayed on screen briefly, so
 // a click usually downloads at once instead of after an asynchronous step.
@@ -598,60 +712,58 @@ function setExporting(on) {
   els.btnExport.disabled         = on || els.imgAfter.hidden;
 }
 
-// Exports the result on screen, which may still belong to the previous file
-// or settings while a new render is pending; everything needed travels with it.
-async function exportImage() {
-  const result = state.after;
-  if (els.btnExport.disabled || !result) return;
-
-  if (!canPack(result)) {
-    download(result.url, result.name);
-    return;
-  }
+// The result as a file. A PNG result is shown uncompressed and is compressed
+// here, unless that was already done while it sat on screen. Everything needed
+// travels with the result, which may still belong to the previous file or
+// settings while a new render is pending.
+async function resultBlob(result, { quiet = false } = {}) {
+  if (!canPack(result)) return (await fetch(result.url)).blob();
 
   let job = state.packed?.result === result ? state.packed : null;
   let bytes = job?.bytes;
-
   if (!bytes) {
     clearTimeout(packTimer);
     if (job) job.exporting = true;
-    setExporting(true);
+    if (!quiet) setExporting(true);
     try {
       await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
       job ||= startPack(result);
       job.exporting = true;
       bytes = await job.promise;
     } finally {
-      setExporting(false);
+      if (!quiet) setExporting(false);
     }
   }
-
   // If compressing failed, the uncompressed preview encoding is still a valid
   // file; it is rebuilt here because the preview URL may have been revoked.
-  downloadBytes(bytes || encodePng(result.source.png, result.raw), result.name);
+  return new Blob([bytes || encodePng(result.source.png, result.raw)], { type: FORMATS.png.mime });
 }
 
-els.btnExport.addEventListener('click', exportImage);
+// The Export button and its options (export.js).
+const exporter = Exporter.create({
+  button: els.btnExport,
+  result() {
+    const result = state.after;
+    if (!result || els.imgAfter.hidden) return null;
+    return {
+      name: result.name,
+      width: result.width || 1,
+      height: result.height || 1,
+      ext: result.name.split('.').pop(),
+      file: () => resultBlob(result),
+      animated: isAnimatedGif(),
+    };
+  },
+});
 
-// Makes the result on screen the new source, here and on the other pages. A
-// PNG result is compressed first, as it is for export.
+// Makes the result on screen the new source, here and on the other pages.
 async function reuseResult() {
   const result = state.after;
   if (els.btnReuse.disabled || !result) return;
-  const format = FORMATS[outputFormat()] || FORMATS.png;
-  let blob;
-  if (canPack(result)) {
-    clearTimeout(packTimer);
-    const job = state.packed?.result === result ? state.packed : startPack(result);
-    job.exporting = true;
-    els.btnReuse.disabled = true;
-    const bytes = await job.promise || encodePng(result.source.png, result.raw);
-    blob = new Blob([bytes], { type: FORMATS.png.mime });
-  } else {
-    blob = await (await fetch(result.url)).blob();
-    blob = new Blob([blob], { type: format.mime });
-  }
-  loadFile(new File([blob], result.name, { type: blob.type }), { own: true });
+  els.btnReuse.disabled = true;
+  const blob = await resultBlob(result, { quiet: true });
+  const mime = (FORMATS[outputFormat()] || FORMATS.png).mime;
+  loadFile(new File([blob], result.name, { type: blob.type || mime }), { own: true });
 }
 
 els.btnReuse.addEventListener('click', reuseResult);
@@ -663,7 +775,7 @@ document.addEventListener('keydown', e => {
   const tag = document.activeElement?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if (e.key === 'r' || e.key === 'R') randomiseSeed();
-  if (e.key === 'e' || e.key === 'E') exportImage();
+  if (e.key === 'e' || e.key === 'E') exporter.export();
 });
 
 // ── After panel state ─────────────────────────────────────────────────────────
@@ -687,6 +799,7 @@ function showAfter(mode, result = null, meta = '') {
   if (state.after && state.after.url !== result?.url) URL.revokeObjectURL(state.after.url);
   state.after = result;
   schedulePack(result);
+  exporter.sync();
 }
 
 // ── Strategy pipeline ─────────────────────────────────────────────────────────
@@ -783,7 +896,7 @@ function renderAttempt(gen, seed, attempt) {
     }
     const retried = attempt > 0 ? `seed ${seed} after ${attempt} ${attempt === 1 ? 'retry' : 'retries'}` : '';
     const meta = [retried, cut].filter(Boolean).join(' · ');
-    showAfter('image', { url, name, raw, source }, meta);
+    showAfter('image', { url, name, raw, source, width: probe.naturalWidth, height: probe.naturalHeight }, meta);
   };
 
   probe.onerror = () => {

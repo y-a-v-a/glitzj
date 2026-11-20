@@ -56,7 +56,7 @@ function createTool(config) {
     source: null,
     fileName: '',
     fileSize: 0,
-    beforeUrl: null,
+    fileNote: '',
     afterUrl: null,
     result: null,
     resultName: '',
@@ -156,7 +156,8 @@ function createTool(config) {
       if (same(value, defaults[key])) continue;
       p.set(schema[key].hash || key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
     }
-    const hash = p.toString().replace(/%2C/g, ',');
+    if (picture.param()) p.set('src', picture.param());
+    const hash = p.toString().replace(/%2C/g, ',').replace(/%40/g, '@');
     try {
       history.replaceState(null, '', hash ? `#${hash}` : location.pathname + location.search);
     } catch {}
@@ -169,7 +170,16 @@ function createTool(config) {
       const short = schema[key].hash || key;
       if (p.has(short)) raw[key] = p.get(short);
     }
-    return sanitize(raw);
+    return { settings: sanitize(raw), src: p.get('src') };
+  }
+
+  // Takes over what the page address says: the settings, and how the picture
+  // is turned and zoomed.
+  function applyHash() {
+    const { settings, src } = readHash();
+    state.settings = settings;
+    picture.fromParam(src);
+    syncControls();
   }
 
   // ── Controls ────────────────────────────────────────────────────────────────
@@ -258,7 +268,6 @@ function createTool(config) {
   if (els.btnSurprise) els.btnSurprise.addEventListener('click', surprise);
   if (els.btnRandom) els.btnRandom.addEventListener('click', randomSeed);
   els.btnReset.addEventListener('click', () => update({ ...defaults }));
-  els.btnExport.addEventListener('click', exportResult);
   if (els.btnReuse) els.btnReuse.addEventListener('click', reuseResult);
   els.zoom.addEventListener('change', applyZoom);
 
@@ -267,15 +276,14 @@ function createTool(config) {
     if (e.target.closest('input:not([type="range"]):not([type="checkbox"]), select, textarea')) return;
     const key = e.key.toLowerCase();
     if (config.keys && config.keys(e, tool)) return e.preventDefault();
-    if (key === 'e' && state.result) { e.preventDefault(); exportResult(); }
+    if (key === 'e' && state.result) { e.preventDefault(); exporter.export(); }
     if (key === 'x' && els.btnSurprise) { e.preventDefault(); surprise(); }
     if (key === 'r' && els.btnRandom && !els.btnRandom.closest('[hidden]')) { e.preventDefault(); randomSeed(); }
     if (key === 'z') { e.preventDefault(); els.zoom.checked = !els.zoom.checked; applyZoom(); }
   });
 
   window.addEventListener('hashchange', () => {
-    state.settings = readHash();
-    syncControls();
+    applyHash();
     scheduleRender();
   });
 
@@ -353,23 +361,13 @@ function createTool(config) {
       canvas.height = height;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
 
-      if (state.beforeUrl) URL.revokeObjectURL(state.beforeUrl);
-      state.beforeUrl = url;
-      state.source = { rgba: ctx.getImageData(0, 0, width, height).data, width, height, cache: {} };
       state.fileName = file.name || 'image';
       state.fileSize = file.size;
-
-      els.imgBefore.src = url;
-      els.imgBefore.hidden = false;
+      state.fileNote = file.type === 'image/gif' ? ' · first frame' : '';
       els.dropHint.hidden = true;
-      els.panels.style.setProperty('--ar', width / height);
-      els.beforeMeta.textContent = `${width}×${height} · ${formatBytes(file.size)}${file.type === 'image/gif' ? ' · first frame' : ''}`;
-
-      if (!restored) Handoff.save(file, state.fileName);
-      if (config.loaded) config.loaded(state.source, tool);
-      syncControls();
-      scheduleRender();
+      picture.open(file, state.fileName, { rgba: ctx.getImageData(0, 0, width, height).data, width, height }, { view: file.sourceView, keep: !restored });
     };
 
     img.onerror = () => {
@@ -379,6 +377,24 @@ function createTool(config) {
 
     img.src = url;
   }
+
+  // The picture as it is turned, mirrored and zoomed on the Before panel
+  // (source.js). Whatever it shows is what the tool works on.
+  const picture = SourceView.manage({
+    surface: els.dropZone,
+    canvas: els.imgBefore,
+    changed(shown, view) {
+      const { width, height } = shown;
+      state.source = { ...shown, cache: {} };
+      els.panels.style.setProperty('--ar', width / height);
+      const how = SourceView.describe(view);
+      els.beforeMeta.textContent = `${width}×${height} · ${formatBytes(state.fileSize)}${state.fileNote}${how ? ` · ${how}` : ''}`;
+      if (config.loaded) config.loaded(state.source, tool);
+      syncControls();
+      writeHash();
+      scheduleRender();
+    },
+  });
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -458,6 +474,7 @@ function createTool(config) {
     els.afterMeta.textContent = parts.join(' · ');
     els.afterMeta.title = result.title || '';
     applyZoom();
+    exporter.sync();
     if (config.shown) config.shown(result, tool);
   }
 
@@ -483,17 +500,22 @@ function createTool(config) {
     return new Promise(resolve => els.after.toBlob(resolve, 'image/png'));
   }
 
-  async function exportResult() {
-    const name = state.resultName;
-    const blob = await resultBlob();
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 30_000);
-  }
+  // The Export button and its options (export.js).
+  const exporter = Exporter.create({
+    button: els.btnExport,
+    result() {
+      const { result } = state;
+      if (!result) return null;
+      return {
+        name: state.resultName,
+        width: result.width,
+        height: result.height,
+        ext: result.ext || 'png',
+        file: resultBlob,
+        image: isCanvas ? els.after : undefined,
+      };
+    },
+  });
 
   async function reuseResult() {
     const name = state.resultName;
@@ -504,8 +526,7 @@ function createTool(config) {
 
   // ── Start ───────────────────────────────────────────────────────────────────
 
-  state.settings = readHash();
-  syncControls();
+  applyHash();
   Handoff.load().then(file => {
     if (file && !state.source && !state.loadGen) loadFile(file, { own: true, quiet: true, restored: true });
   });

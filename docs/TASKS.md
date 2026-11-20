@@ -185,3 +185,12 @@
 - [x] `mosh.js`: next frame by zoom, pan, spin or another picture; logarithmic block motion search; invented vectors for Fall and Scatter; correction; runs that continue from the last frame
 - [x] Play and Record, with the recorder shared with the Signal page
 - [x] Node tests
+
+## Phase 21: Source view and export options
+
+- [x] `source.js`: quarter turns, mirror, flip and zoom-as-crop of the opened picture, as a view that leaves the file alone; toolbar, shortcuts and drag-to-pan on the Before panel of every page
+- [x] The view in the page address (`src=`) and in the hand-off
+- [x] Pixel pages apply the view to the pixels; the Glitch page redraws the file and restores the opened one when the view is reset
+- [x] `export.js`: size, scaling, format and quality options on every Export button, remembered; rendered copies of file results; Copy and Share
+- [x] Node tests for the view arithmetic and the export plan
+
