@@ -42,6 +42,7 @@ const els = {
   error:        $('error'),
   zoom:         $('zoom'),
   btnExport:    $('btn-export'),
+  btnReuse:    $('btn-reuse'),
   btnReset:     $('btn-reset'),
   chromaGroup:  $('chroma-group'),
 };
@@ -154,6 +155,7 @@ for (const btn of document.querySelectorAll('[data-for]')) {
 els.btnReset.addEventListener('click', () => update({ ...DEFAULTS }));
 els.btnExport.addEventListener('click', exportJpeg);
 els.zoom.addEventListener('change', applyZoom);
+els.btnReuse.addEventListener('click', reuseResult);
 
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -210,12 +212,17 @@ document.addEventListener('paste', e => {
   loadFile(file);
 });
 
-function loadFile(file) {
-  hideError();
+// `own` marks an image the app made itself (a result fed back in, or the image
+// carried over from another page), which may be larger than a file may be.
+// `restored` is the carried-over image: it arrives without anyone asking, so
+// it fails silently and is not stored again.
+function loadFile(file, { own = false, restored = false } = {}) {
+  if (!restored) hideError();
   const gen = ++state.loadGen;
+  const fail = restored ? () => {} : showError;
 
-  if (file.size > MAX_FILE_BYTES) {
-    return showError(`File too large (${formatBytes(file.size)}). Maximum is 10 MB.`);
+  if (!own && file.size > MAX_FILE_BYTES) {
+    return fail(`File too large (${formatBytes(file.size)}). Maximum is 10 MB.`);
   }
 
   const url = URL.createObjectURL(file);
@@ -226,11 +233,11 @@ function loadFile(file) {
     const { naturalWidth: width, naturalHeight: height } = img;
     if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
       URL.revokeObjectURL(url);
-      return showError(`Image too large (${width}×${height}px). Maximum is ${MAX_DIMENSION}×${MAX_DIMENSION}px.`);
+      return fail(`Image too large (${width}×${height}px). Maximum is ${MAX_DIMENSION}×${MAX_DIMENSION}px.`);
     }
     if (!width || !height) {
       URL.revokeObjectURL(url);
-      return showError('This image has no size the browser can draw.');
+      return fail('This image has no size the browser can draw.');
     }
 
     const canvas = document.createElement('canvas');
@@ -251,12 +258,13 @@ function loadFile(file) {
     els.panels.style.setProperty('--ar', width / height);
     els.beforeMeta.textContent = `${width}×${height} · ${formatBytes(file.size)}${file.type === 'image/gif' ? ' · first frame' : ''}`;
 
+    if (!restored) Handoff.save(file, state.fileName);
     scheduleRender();
   };
 
   img.onerror = () => {
     URL.revokeObjectURL(url);
-    if (gen === state.loadGen) showError('Could not decode the image. Is it an image file your browser can show?');
+    if (gen === state.loadGen) fail('Could not decode the image. Is it an image file your browser can show?');
   };
 
   img.src = url;
@@ -315,6 +323,7 @@ function show(result, settings) {
   els.imgAfter.hidden = false;
   els.placeholder.hidden = true;
   els.btnExport.disabled = false;
+  els.btnReuse.disabled = false;
   state.result = { ...result, name: exportName(settings) };
 
   const bpp = result.bytes.length * 8 / (result.width * result.height);
@@ -357,7 +366,16 @@ function exportJpeg() {
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
+function reuseResult() {
+  const { result } = state;
+  if (!result) return;
+  loadFile(new File([result.bytes], result.name, { type: 'image/jpeg' }), { own: true });
+}
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 state.settings = readHash();
 syncControls();
+Handoff.load().then(file => {
+  if (file && !state.source && !state.loadGen) loadFile(file, { own: true, restored: true });
+});

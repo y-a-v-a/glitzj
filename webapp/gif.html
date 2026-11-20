@@ -19,6 +19,13 @@
       <a class="site-nav__link" href="index.html">Glitch</a>
       <a class="site-nav__link" href="gif.html" aria-current="page">GIF dither</a>
       <a class="site-nav__link" href="crush.html">JPEG crush</a>
+      <a class="site-nav__link" href="surgery.html">JPEG surgery</a>
+      <a class="site-nav__link" href="split.html">Split</a>
+      <a class="site-nav__link" href="sort.html">Sort</a>
+      <a class="site-nav__link" href="bend.html">Bend</a>
+      <a class="site-nav__link" href="misread.html">Misread</a>
+      <a class="site-nav__link" href="signal.html">Signal</a>
+      <a class="site-nav__link" href="mosh.html">Mosh</a>
     </nav>
     <ul class="site-badges" aria-label="About this tool">
       <li class="badge"><span class="badge__dot" aria-hidden="true"></span>Runs in your browser, nothing is uploaded</li>
@@ -187,6 +194,10 @@
             <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v3h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Reset
           </button>
+          <button class="btn btn--secondary" id="btn-reuse" disabled title="Make this result the new source, to break it again here or in another tool">
+            <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 6H5.5a3 3 0 0 0 0 6H8M13 6l-3-3m3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Feed back
+          </button>
           <button class="btn btn--primary" id="btn-export" disabled title="Download the GIF (E)">
             <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Export GIF
@@ -202,6 +213,7 @@
     <span class="site-footer__keys"><kbd class="kbd">Z</kbd> 1:1 <kbd class="kbd">E</kbd> export · paste an image anywhere</span>
   </footer>
 
+  <script src="handoff.js"></script>
   <script src="dither.js"></script>
   <script src="gif-page.js"></script>
 </body>

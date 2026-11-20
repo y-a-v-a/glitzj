@@ -133,3 +133,55 @@
 - [x] Time-sliced rendering with progress; stale jobs abandoned
 - [x] Settings mirrored in the hash and the export name; 1:1 view; `0` key for quality 0
 - [x] Node tests with an independent baseline decoder; Chrome, Firefox and ImageIO decode every subsampling
+
+## Phase 13: Tool page shell and hand-off
+
+- [x] `tool.js`: one page shell for the pixel tools: settings declared once (ranges, choices, booleans, number lists), mirrored in the hash, controls wired from `data-` attributes, time-sliced rendering of a generator, canvas or `<img>` output, 1:1, export
+- [x] `pixels.js`: seeded and hash-based random numbers, bell-curve noise, compositing over white, resizing
+- [x] `handoff.js`: the image of the current tab is kept in IndexedDB and loaded by the next page; tied to the tab through `sessionStorage`
+- [x] Feed back on every page, including Glitch, GIF dither and JPEG crush: the result becomes the source
+- [x] Navigation with all pages, wrapping on narrow screens
+
+## Phase 14: Split page
+
+- [x] `split.js`: RGB, CMYK and YCbCr planes; per-plane offset, zoom, twist and tear; wrap, smear or blank edges; rewiring; unsmoothed sampling
+- [x] Drag a plane on the result, nudge with arrow keys, Scatter and Align
+- [x] Node tests
+
+## Phase 15: Sort page
+
+- [x] `sort.js`: nine sorting algorithms, each stopped at a fraction of its work (bubble through a heap, checked against literal passes)
+- [x] Spans by brightness range, random chunks or whole lines; seven keys; four directions; uneven stops
+- [x] Play runs the sort from 0 to 100
+- [x] Node tests
+
+## Phase 16: Misread page
+
+- [x] `misread.js`: nine raw formats to write and read, width offset, byte skip, bit shift, bit reversal, byte swap
+- [x] Six text editors in between, including real UTF-8 replacement through `TextDecoder`
+- [x] Node tests
+
+## Phase 17: Bend page
+
+- [x] `bend.js`: tape along rows, back and forth, columns or a Hilbert curve; one or three tracks; linear or µ-law; clip or wrap; eight pedals; backwards
+- [x] Listen with a playhead on the picture, live while the knobs turn; WAV export
+- [x] Node tests
+
+## Phase 18: Signal page
+
+- [x] `signal.js`: NTSC composite encode, transmission damage, notch, comb and black-and-white receivers
+- [x] Live reception at up to 30 frames a second; recording through `MediaRecorder`
+- [x] Node tests
+
+## Phase 19: JPEG surgery page
+
+- [x] `surgery.js` on top of `crush.js`: coefficient cuts (band, shift, mirror, invert, transplant, drift, swap colors) and header lies (quality, tables, width, sampling)
+- [x] Shared Huffman tables when the claimed sampling differs, so every lie decodes
+- [x] Node tests with the shared independent decoder; 450 combinations decoded in Chrome, 180 in ImageIO
+
+## Phase 20: Surprise me and Mosh page
+
+- [x] Surprise me on every pixel tool: each page supplies a function that rolls a whole look
+- [x] `mosh.js`: next frame by zoom, pan, spin or another picture; logarithmic block motion search; invented vectors for Fall and Scatter; correction; runs that continue from the last frame
+- [x] Play and Record, with the recorder shared with the Signal page
+- [x] Node tests

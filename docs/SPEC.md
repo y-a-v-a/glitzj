@@ -6,7 +6,7 @@ The glitch making app
 
 A glitch in an image is a visual representation of data deformation without totally breaking the image's data signature. In other words, a glitch is bended data — an erroneous derivative of the original, but one whose data is still understood by common image rendering engines (the browser, OS image previews, etc.).
 
-The app lets a user load a JPEG, PNG or GIF image and apply one or more glitch strategies to it in a controlled way. Only renderable results can be exported — the output is always a valid file of the same format.
+The app lets a user load a JPEG, PNG or GIF image and apply one or more glitch strategies to it in a controlled way. Further pages break pictures in other ways, each by misusing a real mechanism instead of damaging a file: see [GIF dither](#gif-dither-page), [JPEG crush](#jpeg-crush-page) and [the pixel tools](#the-pixel-tools). Only renderable results can be exported — the output is always a valid file of the same format.
 
 JPEG was the first target format because its compressed scan data is tolerant of byte-level corruption, producing visually interesting artifacts. PNG guards its pixel data with a zlib stream and per-chunk CRC checksums, so damaging the file in place only produces broken images. Glitzj therefore glitches PNG one level down, in the decompressed scanline data, and re-encodes the result (see [PNG](#png)). GIF has no checksums, but its LZW codes are packed across byte boundaries and only mean something relative to the dictionary built before them, so Glitzj glitches GIF at the level of whole codes and packs them again (see [GIF](#gif)).
 
@@ -233,6 +233,193 @@ On a synthetic test image, generations without a shift stopped changing after th
 
 Settings are mirrored in the hash (`#q=90&split=1&cq=10&sub=410&gen=20&shift=5`), leaving out values that equal the defaults. The export is named `<original>_crush_q<quality>[_cq<color quality>]_<subsampling>[_gen<n>_shift<px>].jpg`.
 
+## The pixel tools
+
+Seven more pages break pictures in other ways than damaging a file's bytes: JPEG surgery, Split, Sort, Bend, Misread, Signal and Mosh. They share one rule with the rest of the app: no effect is painted on. Each page implements a real mechanism (a codec, an algorithm, a color model, a signal chain) and misuses it, so every artifact is something that mechanism does.
+
+Each tool is a pure module (no DOM, tested in Node) that exposes a generator, `<tool>Steps(source, settings)`, plus a small page script. `source` is `{ rgba, width, height, cache }`; `cache` belongs to the loaded image and holds whatever is expensive and does not depend on the settings that change most (color planes, the written byte stream, the encoded signal, the quantized coefficients). The generator yields now and then, optionally a progress fraction, and returns either pixels `{ rgba, width, height }` or a finished file `{ bytes, type, ext, width, height }`.
+
+### The page shell
+
+`tool.js` holds what the seven pages have in common, so a page script is little more than a description of its settings:
+
+- **Settings** are declared once, each with a default and either a range of whole numbers, a list of choices, a boolean, or a list of whole numbers. From that one description the shell sanitizes values, mirrors them in the hash (defaults left out) and wires the controls.
+- **Controls** are bound from the markup: `data-setting` on inputs, selects and checkboxes, `data-for` + `data-step` on stepper buttons, `data-choice` + `data-value` on buttons that pick one of a list, `data-toggle` on on/off buttons, and `id="<key>-value"` for a readout.
+- **Loading** is as on the dither and crush pages: click, drop or paste, any image the browser can decode, 10 MB and 4000 × 4000 px at most, the first frame of an animation.
+- **Rendering** runs the generator in slices of about 12 ms. A render that takes longer than one slice shows its progress in the line above the result; a newer render replaces a running one. Pixels are drawn on a canvas and exported as PNG through `canvas.toBlob`; a finished file is shown in an `<img>`, so the browser's own decoder renders it.
+- **1:1**, **Reset**, **Export** (`E`), **Randomise** (`R`, where a tool has a seed) **Surprise me** (`X`) and **Feed back** behave the same on every page. Surprise me replaces all settings with a random look; each page supplies its own function for that, so a roll stays within what looks like something (a few pedals instead of all eight, small offsets instead of the full range). The export is named `<original>_<tool>_<settings>.<ext>`.
+
+`pixels.js` has the helpers the tools share: a seeded random number generator, a hash-based one for values that must be looked up by row and frame, bell-curve noise, compositing over white, and resizing (area averaging down, linear interpolation up).
+
+### Hand-off
+
+`handoff.js` keeps the image the page is working on in IndexedDB (database `glitzj`), so it is there when another page of the app is opened. Every tab stores its image under an id of its own, made up once and kept in `sessionStorage`: navigating within a tab carries the image along, a new tab starts empty, and two tabs never see each other's image. A closed tab cannot remove its record, so each save also removes records of other tabs that are more than a day old. Every page stores the file it opened and, on start, loads the stored one if nothing else has been opened. A carried-over image skips the 10 MB limit (it may be the result of a tool) and fails silently where a page cannot use it: the Glitch page ignores anything that is not a JPEG, PNG or GIF. Where storage is unavailable nothing is kept and nothing breaks.
+
+**Feed back** hands the result on screen to the page's own `loadFile` as a file named like the export, which also stores it for the other pages. On the Glitch page a PNG result is compressed first, as for export.
+
+## JPEG surgery page
+
+`surgery.html` uses the encoder of the crush page (`crush.js`) up to the quantized coefficients, then works on them and on the header (`surgery.js`).
+
+### Pipeline
+
+1. **Encode honestly**: flatten over white, convert, subsample, DCT and quantize at the chosen quality and subsampling, exactly as JPEG crush does. The coefficients are cached per quality and subsampling; every later step works on a copy.
+2. **Cut**, in this order: Drift, then per component Transplant, Mirror blocks, Shift, Invert detail and the band limits, then Swap color channels.
+   - *Drift* walks the MCUs in scan order. At a number of random MCUs that grows with the setting, a random offset is added to the DC of that MCU's blocks and of all that follow, until the next such MCU (which sets it to zero one time in four). Offsets are in pixel values, converted with the DC step, 0.6 as large for the color components, and the DC is clamped to ±1023.
+   - *Transplant* copies the 63 AC coefficients of a random block of the same component over a share of the blocks.
+   - *Mirror blocks* moves the coefficient for pattern (u, v) to (v, u), using a table derived from the zigzag order.
+   - *Shift* rotates the AC coefficients by k places along the zigzag.
+   - *Invert detail* negates the AC coefficients.
+   - *Coarsest* and *Finest* zero every coefficient whose zigzag index is outside the range, the DC included.
+3. **Lie**: build the header.
+   - *Quality*: the DQT holds the tables for the claimed quality.
+   - *Swap the step tables*: table 0 and 1 change places.
+   - *Claimed color*: the frame header names other sampling factors. The scan is unchanged, so the decoder assigns its blocks to the wrong components. Each component would then be decoded with another's Huffman tables, so in this case the file has one DC and one AC table that all components share.
+   - *Claimed width*: with `B` blocks stored and `b` blocks per MCU under the claimed sampling, the decoder can be given `floor(B / b)` MCUs. The header claims `cols` MCUs per row, the honest number plus the setting, and `floor(MCUs / cols)` rows, so the scan always holds at least what the header asks for. Neither side may exceed the 16 bits a JPEG header has for it, and a picture that holds less than one MCU of the claimed layout keeps its honest header. Data left over after the last claimed MCU is ignored by decoders.
+4. **Write** a baseline JFIF file as crush does: optimal Huffman tables for the coefficients as cut.
+
+### Verification
+
+With no cuts and no lies the output is byte for byte that of `crushJpeg` at every subsampling. Cuts are checked by reading the file back with the independent decoder of the crush tests. In Chrome 156, 450 combinations of subsampling, claimed sampling, claimed width and cuts all decoded, at the claimed size; 180 of them also in macOS ImageIO (through `sips`).
+
+### Determinism
+
+Hash: `#q=50&sub=420&low=1&high=40&shift=3&transplant=20&drift=30&mirror=1&negate=1&swapc=1&s=4&lie=0&claim=10&widen=2&claimsub=444&swapt=1`. The export is named `<original>_surgery_q<quality>_<subsampling>[_band<lo>-<hi>][_shift<n>][_transplant<n>][_drift<n>][_mirror][_inverted][_swapcolors][_s<seed>][_claims-q<n>][_claims-w<±n>][_claims-<sampling>][_swaptables].jpg`.
+
+## Split page
+
+`split.html` (`split.js`) separates the picture into the planes of a color model, moves each plane and recombines them.
+
+### Pipeline
+
+1. **Planes**, one byte per pixel each, cached per model. RGB: the three channels. CMYK: `K = 255 − max(R, G, B)` and each of C, M, Y as the rest of its channel relative to `255 − K`. YCbCr: JFIF, full range.
+2. **Move** each plane by inverse mapping without interpolation: output pixel (x, y) takes the plane's value at the position found by undoing the plane's offset and tear, then its rotation and zoom around the center. A plane's place in the stack, from −1 for the first to +1 for the last, scales its zoom (up to ±25%) and twist (up to ±15°), so the outer planes move in opposite directions and the middle plane of three stays put. With no zoom or twist, rows are copied whole.
+3. **Tear**: the rows are cut into bands of random height (the same bands for all planes). About half the bands tear; each plane gets its own shift, half shared with the other planes and half its own, up to a quarter of the width.
+4. **Edges**: positions outside the plane wrap around, repeat the nearest edge pixel, or are blank: 0 for light, 0 for ink (bare paper), 128 for the two color signals.
+5. **Wiring** decides which source plane fills each place: straight, one over, one back, or mirrored.
+6. **Stack**: RGB directly; CMYK as `(255 − ink) × (255 − K) / 255`; YCbCr by the inverse transform. Alpha is copied from the source unmoved.
+
+### Interaction
+
+Dragging on the result moves the chosen plane; the pointer distance is scaled by the ratio of canvas pixels to screen pixels, so the plane follows the pointer at any zoom. Arrow keys move it by 1 px, 10 px with Shift; `S` scatters all planes by up to 3% of the width, `A` aligns them.
+
+### Determinism
+
+Hash: `#m=cmyk&o=12,-3,0,0,-8,5,0,0&zoom=20&twist=-10&tear=30&band=20&s=4&edge=blank&w=next`, the offsets as x, y per plane. The export is named `<original>_split_<model>[_<plane><dx>x<dy>…][_zoom<n>][_twist<n>][_tear<n>_band<n>_s<seed>][_<wiring>][_<edge>].png`.
+
+## Sort page
+
+`sort.html` (`sort.js`) runs sorting algorithms over spans of each row or column and stops them at a chosen fraction of their work.
+
+### Pipeline
+
+For every line (row, or column for the vertical directions):
+
+1. **Keys**: one whole number per pixel. Brightness, hue, saturation and the single channels use 10 bits; "the number itself" is `0xRRGGBB`, 24 bits. For the two reversed directions the key is subtracted from its maximum.
+2. **Pack**: each pixel becomes `key × 4096 + position` in a `Float64Array`. Comparing two entries compares keys first and positions second, which makes every algorithm stable for free, and the position says which source pixel to copy afterwards.
+3. **Spans**: runs of pixels whose brightness is within the range, chunks of random length, or the whole line.
+4. **Sort** each span partway, at progress `t` from 0 to 1 (plus or minus up to half of *Unevenly*, per line).
+5. **Copy** the pixels to their new places. Pixels outside the spans are not touched.
+
+### The algorithms, interrupted
+
+Each is the state the real algorithm would be in, computed directly where running it literally would be too slow:
+
+- **Bubble**: after `k = round(t² × (n − 1))` passes. Computed with a min-heap of `k + 1` entries: push the entries in order and, once the heap is full, pop the smallest into the next place. That is exactly the result of k passes, in O(n log k).
+- **Insertion**: the first `round(t × n)` entries sorted, the rest untouched.
+- **Selection**: `round(t × n)` rounds, each swapping the smallest remaining entry into place; the swaps are replayed with an index of where each entry is.
+- **Quick**: Hoare partitioning around the middle entry, recursing to depth `round(t × (⌈log₂ n⌉ + 2))` and no further.
+- **Merge**: bottom-up, after `round(t × ⌈log₂ n⌉)` rounds: sorted runs of 2^rounds entries.
+- **Shell**: gaps n/2, n/4, …, 1; after the first `round(t × number of gaps)` of them. Each gap pass leaves every gap-th entry sorted among themselves.
+- **Heap**: up to `t = 0.25` a share of the sift-downs that build the max-heap; after that, a share of the n − 1 removals of the largest entry to the end.
+- **Radix**: least significant bit first, after `round(t × key bits)` stable passes, so in stable order of the low bits only.
+- **Bogo**: `round(t × n)` swaps of two random entries.
+
+At `t = 0` every algorithm leaves the span as it is and at `t = 1` it is fully sorted, so at 100 all nine give the same picture.
+
+### Determinism
+
+Hash: `#a=shell&p=40&jitter=20&by=hue&dir=down&span=chunks&low=20&high=70&size=40&s=3`. The export is named `<original>_sort_<algorithm>_p<progress>_<key>_<direction>_<span>[_uneven<n>][_s<seed>].png`. The seed is used by random chunks, uneven stops and Bogo. **Play** steps the progress up by one after each finished render.
+
+## Bend page
+
+`bend.html` (`bend.js`) treats the pixel data as sound.
+
+### Pipeline
+
+1. **Scan**: the order in which pixels go onto the tape. Rows; back and forth (every other row reversed); columns; or a generalized Hilbert curve (after Jakub Červený's `gilbert`), which covers a rectangle of any size with a path that only ever steps to a neighboring pixel.
+2. **Tracks**: one track with R, G, B of each pixel in turn (3 samples per pixel), or three tracks of one channel each, processed separately.
+3. **Decode** bytes to samples from −1 to 1: linear (`(b − 128) / 128`, unsigned 8-bit PCM) or G.711 µ-law.
+4. **Pedals**, in fixed order, each in place: Speed (resampling by `2^((knob − 50) / 50)³` with linear interpolation, silence past the end), Drive (gain 1 to 24 and an offset), Crush (8 down to 1 bit, sample-and-hold of 1 to 96 samples), Filter (Chamberlin state-variable; low, high or band; Q 0.5 to 40), Phaser (four first-order all-pass stages with a swept coefficient and feedback), Vibrato (a delay line whose length swings), Echo (`y[n] = (1 − f) x[n] + f y[n − d]`, which keeps a flat tape at its level), Reverb (Schroeder: four parallel combs and two all-passes). Lengths and rates are relative to one line of the picture in samples. With *Play backwards* the tape is reversed before and after the pedals.
+5. **Encode** samples to bytes: clipped to the range, or wrapped around it, then linear or µ-law.
+
+With every pedal off the picture comes back unchanged (except that a µ-law byte 0x7F, negative zero, returns as 0xFF).
+
+### Sound
+
+**Listen** plays the tape at 44.1 kHz through Web Audio, queued a quarter of a second at a time from the result that is on screen at that moment, so a change of settings is heard within half a second. A marker shows which pixel the current sample came from: a line across for row scans, a line down for columns, a dot for the Hilbert curve. **Export WAV** writes the tape as 8-bit mono PCM.
+
+### Determinism
+
+Hash: `#scan=hilbert&tracks=three&codec=ulaw&overflow=wrap&rev=1&echo=0&reverb=1&reverbA=60&reverbB=80…`; each pedal has an on/off key and one or two knob keys. Nothing is random. The export name lists the scan, the tracks and every active pedal with its knobs.
+
+## Misread page
+
+`misread.html` (`misread.js`) writes the picture as raw bytes and reads them back under other assumptions. Nothing is random.
+
+### Pipeline
+
+1. **Write** (cached per format), after compositing over white: RGB or BGR at 3 bytes a pixel, RGBA at 4, RGB 5-6-5 little-endian at 2, gray at 1, black and white at 1 bit (threshold 128, highest bit first), planar RGB, I420 (a full brightness plane, then two color planes at half resolution each way), or YUYV (two pixels share one pair of color bytes).
+2. **Text editor** (optional): CRLF inserts 0x0D before every 0x0A not already preceded by one; UTF-8 decodes the bytes as UTF-8 and encodes them again, with `TextDecoder` and `TextEncoder`, so every invalid sequence becomes EF BF BD; Latin-1 to UTF-8 turns each byte above 0x7F into two; 7-bit clears the top bit; caps lock maps 0x61–0x7A to 0x41–0x5A; and one drops every zero byte. Editors that lengthen the data stop at the length the reader can use.
+3. **Align**: drop the first 0 to 16 bytes; shift the whole stream left by 0 to 7 bits; reverse the bits of every byte; swap every pair of bytes.
+4. **Read** in the chosen format at the original width plus or minus up to 400 px. The height follows from the amount of data: `⌈bytes / (width × bytes per pixel)⌉` rows, at most four times the original height and at most 4000. Where the data runs out the picture is black. The fourth byte of RGBA is skipped instead of being used as transparency.
+
+### Determinism
+
+Hash: `#w=rgb24&r=i420&dw=3&ed=crlf&skip=1&bits=3&rev=1&swap=1`. The export is named `<original>_misread_<written>-as-<read>[_w<±n>][_<editor>][_skip<n>][_bits<n>][_reversed][_swapped].png`.
+
+## Signal page
+
+`signal.html` (`signal.js`) encodes the picture as an NTSC composite video signal, damages it and decodes it.
+
+### Pipeline
+
+1. **Raster**: the picture is resized to the chosen number of lines (never more than it has) and to a width of `lines × aspect` pixels; the signal has 754 / 640 samples per pixel, the ratio of four times the color subcarrier to square pixels in a 4:3 NTSC frame.
+2. **Encode** (cached per number of lines): per sample `Y = 0.299 R + 0.587 G + 0.114 B` and the color difference signals I and Q, band-limited by box filters of 7 and 15 samples. The composite signal is `Y + I cos φ + Q sin φ` with `φ = π/2 × sample`, four samples per subcarrier cycle. The color part is negated on every other line and every other frame, which is NTSC's 227.5 cycles per line.
+3. **Transmit**, per line: a start offset (horizontal hold as a slope over the frame; jitter; a slow wobble with the top of the frame bending; tape trouble), with the line wrapped around a blanking gap of 16% of its length and fetched with linear interpolation; a ghost (the signal added to itself a few samples later, and subtracted at half that delay); Gaussian noise; dropouts (a white dash with a linear tail). Vertical hold shifts which line arrives on which row, around a gap of 8% of the frame. The tracking band is a stretch of lines with extra offset and noise, 40% of them at its center without color; the last 1.4% of the lines get the offset and noise of a head switch.
+4. **Separate** brightness from color. Notch: `Y = ¼ s[n − 2] + ½ s[n] + ¼ s[n + 2]`, which cancels the subcarrier, and color is the rest. Comb: half the sum and half the difference of this line and the previous one. Black and white: the signal is the brightness.
+5. **Demodulate**: multiply the color part by `2 cos` and `2 sin` of the reference, which starts as late as the line does (the receiver locks to each line's burst) plus the tint and the per-line hue drift; average four samples to remove the double-frequency part; smooth with a one-pole filter (Bleed); scale by Color.
+6. **Display**: a one-pole filter on the brightness (Soft), YIQ to RGB, resampled to the raster width.
+
+With everything in step 3 off and no smoothing, a soft test picture comes back with a mean error under 5 of 255 with either color receiver.
+
+### Live and recording
+
+**Live** renders frame after frame at up to 30 a second: each frame has its own noise, the subcarrier flips (so dots crawl), the wobble and the tracking band move on, and pictures that have lost horizontal or vertical hold slide. It stops when the page is hidden. **Record** captures the canvas with `MediaRecorder` (WebM, or MP4 where that is what the browser offers) and switches Live on. On a 768 × 512 test photo at 480 lines a frame took about 30 ms, so Live ran at 28 frames a second in Chrome.
+
+### Determinism
+
+Hash: `#lines=240&set=comb&color=120&tint=20&noise=30&ghost=40&hue=20&bleed=60&soft=40&jitter=30&wobble=20&hhold=15&vhold=10&tracking=40&dropouts=30&s=5`. A still is always frame 0 of its seed, so the same link gives the same picture; Live is not mirrored in the hash. The export is named after the lines, the receiver and every setting that is not zero.
+
+## Mosh page
+
+`mosh.html` (`mosh.js`) does to a still what datamoshing does to video: it derives the instructions a video encoder would write for the step from one frame to the next, and carries them out repeatedly without ever inserting a keyframe.
+
+### Pipeline
+
+1. **Frame**: the picture, composited over white and resized so that its longest side is at most 640 or 1280 px (or left as it is).
+2. **Next frame** (not for Fall and Scatter): the frame zoomed by up to 8%, shifted by up to 3% of its longest side in the chosen direction, or turned by up to 6°, sampled without smoothing with the edges repeated; or another picture, resized to the frame.
+3. **Motion search**: for every block of 8, 16 or 32 px of the next frame, a vector to the place in the first frame it matches best, by the sum of absolute differences in brightness. The search is logarithmic, as in fast encoders: from the best position so far it tries the eight neighbors at half a block, moves while that improves the match, halves the step, and so on down to one pixel, within two blocks' distance. It gets stuck in local minima and has nothing to hold on to in flat areas, which is the point.
+   - *Fall* invents the vectors instead: each block's vector is its mean brightness times 1.5 blocks at full strength, against the chosen direction. *Scatter* gives every block a random vector of up to 1.5 blocks.
+4. **Correction**: the next frame minus the first frame moved by the vectors, per pixel and channel.
+5. **Run**: frame n + 1 is frame n with every block fetched from where its vector points (positions outside the frame repeat the edge), plus the correction times the Correction setting. At 100% frame 1 equals the next frame exactly, as in a real decoder; every later frame adds the same correction again.
+
+The vectors and the correction are cached per motion settings, and the run is kept: asking for more frames continues from the last one computed, so Play costs one frame of work per frame.
+
+### Determinism
+
+Hash: `#m=spin&strength=-60&dir=180&block=32&size=640&fix=20&s=3&f=40`. The other picture is not part of the link. The export is named `<original>_mosh_<motion>_<strength>[_dir<n>]_b<block>_f<frames>[_fix<n>][_s<seed>].png`; a recording gets the same name as a video file. On a 768 × 512 test photo Play ran at 21 frames a second in Chrome.
+
 ## Iteration / validity
 
 ### Marker protection
@@ -256,6 +443,8 @@ Web app (HTML + JavaScript):
 - `<img>` / `Canvas` for real-time rendering and broken-state detection
 - `Blob` + `URL.createObjectURL` for the live preview
 - `FileSaver` or a download anchor for export
+- `IndexedDB` and `sessionStorage` to carry the image from page to page
+- Web Audio for listening to the tape on the Bend page; `MediaRecorder` for recording on the Signal page
 - No install required, runs in any browser
 
 ### Guardrails
@@ -285,5 +474,21 @@ A JPEG that ends without an `EOI` marker (a common result of truncated downloads
 - JPEG crush (`crush.test.js`), with a baseline decoder written independently of `crush.js`: the zigzag order, IJG quality scaling, the AAN DCTs against the textbook formulas, Huffman length limiting, that decoded coefficients equal the encoded ones, decoding at every subsampling and at sizes that are not whole MCUs, closeness to the source at quality 100, separate color quality, generations, rolling, compositing over white and determinism.
 
 - GIF (`gif.test.js`), with synthetic GIFs from an LZW encoder and checked by a reference decoder, both written independently of the app (the decoder gave the same pixels as Chrome, Firefox and ImageIO on every file they decoded in full): block walk and error cases, cut-off files and frames of zero size, minimum code size 1, bit-exact repair of undamaged codes (with and without clear codes when the dictionary fills), replacement of bad codes, the wrap-around of short frames, trimming, palette wraparound, that starting over stays fast on codes that are nearly all clear codes, that raw mode's cut-off count matches the reference decoder, that 12-bit codes survive Echo and Drift, Prism's pixel counts, picks and color rules, that every frame decodes in full with every index inside its palette under random settings, that everything outside the image data stays the same, determinism, Steady, and the pixel limit.
+
+- Shared helpers (`pixels.test.js`): the random number generators, compositing over white, and resizing.
+
+- Split (`split.test.js`): the picture comes back when nothing is moved; an offset moves exactly one plane; the three edge modes; blank planes per model; wiring; zoom and twist leave the middle plane alone; tear bands are shared between planes and follow the seed; alpha stays in place.
+
+- Sort (`sort.test.js`): every algorithm only rearranges, does nothing at 0 and finishes at 1; bubble and selection sort against literal versions of themselves; the invariants of insertion, merge, shell, heap, quick and radix sort when interrupted; key ranges; directions; pixels never leave their line; pixels outside the brightness range never move.
+
+- Misread (`misread.test.js`): round trips of every format; stream sizes; the shear of a width that is one off; what each text editor does, byte for byte; bit shifts, reversal and swaps; the height limits.
+
+- Bend (`bend.test.js`): the Hilbert curve covers rectangles of any size in steps to a neighbor; µ-law against G.711; the picture comes back with every pedal off, for every scan and track layout; an echo's impulse response; echoes cross colors on one track only; backwards echoes come first; no pedal produces values that run away at any knob setting; the WAV header.
+
+- Signal (`signal.test.js`): the raster; the subcarrier's four samples per cycle; a clean cable returns a soft picture; stripes at the subcarrier frequency turn into color with the notch filter; a black and white set shows a flat color as dots; the color and tint knobs; vertical hold moves whole lines around a black bar; horizontal hold leans; the seed and the frame number.
+
+- Mosh (`mosh.test.js`): the search finds a known pan; nothing moves in a flat picture; with the full correction one frame equals the next frame exactly; without correction every pixel of a result is a pixel of the source; a continued run equals one started over; the invented vectors; another picture as next frame; tiny and odd sizes.
+
+- JPEG surgery (`surgery.test.js`), with the independent decoder of the crush tests (shared from `test/helpers/`): without cuts or lies the bytes equal JPEG crush's; every cut read back from the file; the header lies; a claimed size never asks for more blocks than the file holds, at every pair of real and claimed sampling; shared Huffman tables when the layout is lied about.
 
 If needed in a later version, larger files can be handled by moving manipulation to a Web Worker, but this is out of scope for now.

@@ -1,0 +1,366 @@
+/* ─── Shared by the pixel tool pages ────────────────────────────────────── */
+
+.panel__image--tool {
+  animation: none;
+  transition: opacity 0.2s;
+}
+
+.panel--after.is-busy .panel__image--tool {
+  opacity: 0.55;
+}
+
+.panel__surface--zoom .panel__image--tool,
+.panel__image--pixels {
+  image-rendering: pixelated;
+}
+
+.controls__toggles:empty {
+  display: none;
+}
+
+.controls__toggles:empty + .controls__buttons {
+  margin-left: auto;
+}
+
+.control-group:has(.control-range:disabled),
+.control-group:has(.control-select:disabled) {
+  opacity: 0.4;
+}
+
+.control-group--stack {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.control-group--colors .control-label {
+  min-width: 5.5ch;
+}
+
+.controls__note {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  max-width: 62ch;
+}
+
+.controls__note kbd {
+  margin-inline: 0.1rem;
+}
+
+/* ─── Choice buttons ────────────────────────────────────────────────────── */
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.btn--choice {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border-color: var(--color-border);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  padding-inline: 0.8rem;
+}
+
+.btn--choice:hover {
+  border-color: var(--color-border-strong);
+}
+
+.btn--choice.active {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  border-color: transparent;
+  box-shadow: -3px 0 0 var(--split-c), 3px 0 0 var(--split-m);
+}
+
+.btn--choice small {
+  font-size: 0.7rem;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* ─── Split: plane chips and dragging ───────────────────────────────────── */
+
+.planes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.plane {
+  --ink: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  padding: 0 0.8rem 0 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.plane:hover {
+  border-color: var(--color-border-strong);
+}
+
+.plane:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
+.plane.active {
+  border-color: var(--ink);
+  box-shadow: inset 0 -3px 0 var(--ink);
+}
+
+.plane__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 25%, transparent);
+}
+
+.plane__name {
+  font-weight: 800;
+}
+
+.plane__offset {
+  min-width: 9ch;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel__surface--drag .panel__image {
+  cursor: grab;
+  touch-action: none;
+}
+
+.panel__surface--drag.is-dragging .panel__image {
+  cursor: grabbing;
+}
+
+/* ─── Bend: the pedalboard ──────────────────────────────────────────────── */
+
+.pedals {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.6rem;
+}
+
+.pedal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.7rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface-2);
+  transition: border-color 0.15s, opacity 0.15s;
+}
+
+.pedal:has(.pedal__switch.active) {
+  border-color: var(--color-border-strong);
+  box-shadow: -2px 0 0 var(--split-c), 2px 0 0 var(--split-m);
+}
+
+.pedal__switch {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 32px;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.pedal__switch:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
+.pedal__switch::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+.pedal__switch.active::before {
+  background: var(--color-live);
+  box-shadow: 0 0 8px var(--color-live);
+}
+
+.pedal__knob {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pedal__knob .control-label {
+  min-width: 7.5ch;
+  font-size: 0.75rem;
+}
+
+.pedal__knob .control-range {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  height: 30px;
+}
+
+.pedal__knob .control-value {
+  min-width: 6ch;
+  font-size: 0.75rem;
+}
+
+.pedal:not(:has(.pedal__switch.active)) .pedal__knob {
+  opacity: 0.45;
+}
+
+/* The line that shows where in the picture the sound is */
+
+.playhead {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--split-m);
+  box-shadow: 0 0 0 1px #000, 0 0 12px var(--split-m);
+  pointer-events: none;
+}
+
+.playhead--row {
+  width: 100%;
+  height: 2px;
+  margin: -1px 0 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.playhead--column {
+  width: 2px;
+  height: 100%;
+  margin: 0 0 0 -1px;
+  border: 0;
+  border-radius: 0;
+}
+
+.panel__stage {
+  position: relative;
+  display: block;
+  line-height: 0;
+}
+
+.panel__surface--zoom .panel__stage {
+  flex-shrink: 0;
+}
+
+@media (min-width: 1180px) {
+  .controls--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .controls--two .controls__section + .controls__section {
+    border-top: none;
+    border-left: 1px dashed var(--color-border);
+  }
+
+  .controls--two .controls__actions,
+  .controls--two .controls__section--full {
+    grid-column: 1 / -1;
+    border-top: 1px dashed var(--color-border);
+    border-left: none;
+  }
+
+  .controls--dither .controls__section--full {
+    grid-column: 1 / -1;
+    border-left: none;
+  }
+
+  .controls--dither .controls__section--full + .controls__section {
+    border-left: none;
+  }
+
+  .controls--dither .controls__section--full ~ .controls__section {
+    border-top: 1px dashed var(--color-border);
+  }
+}
+
+/* Long select labels shrink with their column instead of spilling out of it */
+
+.controls__row > .control-group {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.controls__row .control-select {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+
+.controls.controls--bend {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.pedal__knob .control-select {
+  height: 30px;
+  font-size: 0.75rem;
+}
+
+/* ─── Signal: live and record ───────────────────────────────────────────── */
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+}
+
+.btn[aria-pressed="true"] .live-dot {
+  background: var(--color-live);
+  box-shadow: 0 0 8px var(--color-live);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.btn.is-recording {
+  border-color: var(--color-broken);
+  color: var(--color-broken);
+}
+
+.panel--after.is-live.is-busy .panel__image--tool {
+  opacity: 1;
+}
+
+.controls__buttons {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btn--choice[data-choice="direction"] {
+  font-size: 1.15rem;
+  line-height: 1;
+}
