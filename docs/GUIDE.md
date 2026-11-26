@@ -15,6 +15,7 @@ What every tool does and what every control is for. For how it is built, see [SP
 - [The original: turn, mirror, zoom](#the-original-turn-mirror-zoom)
 - [Export](#export)
 - [From tool to tool](#from-tool-to-tool)
+- [Showcase](#showcase)
 - [Limits](#limits)
 
 ## Glitch
@@ -239,6 +240,19 @@ The image you open follows you from page to page for as long as the tab is open,
 **Surprise me** (or the **X** key), on the seven newer tools, rolls every setting at once for a look you did not ask for. **Reset** takes you back.
 
 **Feed back**, next to Export on every page, makes the result on screen the new source. That turns the ten tools into one chain, in any order and as long as you like, and the name of the exported file keeps the whole recipe.
+
+## Showcase
+
+The **Showcase** page (`showcase.html`) shows what the tools do without your having to open a picture. It takes one photo of two parrots and puts it through all ten tools, four ways each, and then through three chains of three tools.
+
+- None of the pictures on it is stored. Your browser makes each one when it comes near the screen, with the same code as the tool pages, so the page shows exactly what the tools make.
+- The strip at the top is the photo cut into ten, one strip per tool. Point at a strip to see that tool's whole picture; pick it to go to the tool's part of the page.
+- Under each large picture are four **looks**. Pick one to see it large, with what was done and the settings that did it.
+- **Open this in …** takes the photo and those settings to the tool itself, where you get the same result and carry on from there. For a step of a chain it takes along what the step before it made.
+- **Show the original**, or holding the mouse button down on a picture, shows the photo as it was.
+- **Try it on your own picture** runs the whole page on a picture of yours instead; you can also drop or paste one. It is made at most 1024 pixels on its longest side and saved as a JPEG first, to keep the page quick and to give the Glitch tool a file to work on. Nothing is uploaded.
+
+The parrots are picture 23 of the Kodak Lossless True Color Image Suite, a set of photos that image compression has been tested on since the 1990s.
 
 ## Limits
 

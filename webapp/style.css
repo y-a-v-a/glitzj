@@ -1538,3 +1538,8 @@ body::before {
     display: none;
   }
 }
+
+/* The showcase is not a tool, and says so by standing a little apart. */
+.site-nav__link--showcase {
+  font-style: italic;
+}

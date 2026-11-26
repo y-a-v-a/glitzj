@@ -1,0 +1,495 @@
+/* ─── Showcase page ─────────────────────────────────────────────────────── */
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+.showcase {
+  --ar: 1.5;
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding: 0 var(--gap) 4rem;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+/* ─── Hero ──────────────────────────────────────────────────────────────── */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: center;
+  padding-block: clamp(2rem, 6vw, 4.5rem);
+}
+
+.hero__kicker,
+.piece__index {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.hero__title {
+  margin-block: 0.6rem 1.25rem;
+  font-size: clamp(2.3rem, 5.4vw, 4.4rem);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+.hero__title span {
+  display: block;
+}
+
+.hero__ask {
+  position: relative;
+  width: fit-content;
+}
+
+/* The question, printed a little out of register. */
+.hero__ask::before,
+.hero__ask::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  white-space: nowrap;
+}
+
+.hero__ask::before {
+  color: var(--split-c);
+  transform: translate(-0.045em, 0.02em);
+}
+
+.hero__ask::after {
+  color: var(--split-m);
+  transform: translate(0.045em, -0.02em);
+}
+
+.hero__lead {
+  max-width: 34rem;
+  font-size: 1.08rem;
+}
+
+.hero__lead--small {
+  margin-top: 0.9rem;
+  font-size: 0.92rem;
+  color: var(--color-text-muted);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+body:not(.is-own) #btn-parrots {
+  display: none;
+}
+
+.hero__using {
+  margin-top: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.hero .error {
+  margin-top: 1rem;
+}
+
+.hero__frame {
+  position: relative;
+  width: min(100%, calc(72vh * var(--ar, 1.5)));
+  margin-inline: auto;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-2);
+  box-shadow: -6px 6px 0 color-mix(in srgb, var(--split-c) 70%, transparent), 6px -6px 0 color-mix(in srgb, var(--split-m) 70%, transparent);
+}
+
+.hero__canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--ar, 1.5);
+}
+
+.hero__strips {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+}
+
+.hero__strip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.5rem 0.3rem;
+  color: #fff;
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 0 3px #000, 0 0 8px #000;
+  border-left: 1px solid rgb(0 0 0 / 0.55);
+  background: linear-gradient(to top, rgb(0 0 0 / 0.55), transparent 42%);
+  outline-offset: -3px;
+}
+
+.hero__strip:first-child {
+  border-left: 0;
+}
+
+.hero__strip:not(.is-made) {
+  color: rgb(255 255 255 / 0.45);
+}
+
+.hero__strip:hover,
+.hero__strip:focus-visible {
+  background: linear-gradient(to top, rgb(0 0 0 / 0.7), transparent 60%);
+}
+
+.hero__strip:focus-visible {
+  outline: 2px solid var(--split-c);
+}
+
+.hero__name {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.hero__number {
+  opacity: 0.8;
+}
+
+/* ─── A piece: one tool, or one chain ───────────────────────────────────── */
+
+.pieces {
+  display: grid;
+  gap: clamp(3.5rem, 9vw, 7rem);
+  padding-block: clamp(2rem, 5vw, 4rem);
+}
+
+.piece {
+  display: grid;
+  grid-template-columns: minmax(0, 768px) minmax(16rem, 1fr);
+  gap: clamp(1.25rem, 3.5vw, 3rem);
+  align-items: start;
+}
+
+.piece:nth-child(even) .piece__picture {
+  order: 2;
+}
+
+.piece:nth-child(even) {
+  grid-template-columns: minmax(16rem, 1fr) minmax(0, 768px);
+}
+
+.piece__frame {
+  position: relative;
+  aspect-ratio: var(--ar);
+  width: min(100%, calc(82vh * var(--ar)));
+  margin-inline: auto;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-2);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.piece__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: opacity 0.2s, filter 0.2s;
+}
+
+.piece__canvas.is-crisp {
+  image-rendering: pixelated;
+}
+
+.piece__frame.is-waiting .piece__canvas {
+  opacity: 0.5;
+  filter: blur(2px);
+}
+
+.piece__state {
+  position: absolute;
+  left: 0.6rem;
+  top: 0.6rem;
+  padding: 0.2rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  box-shadow: -2px 0 0 var(--split-c), 2px 0 0 var(--split-m);
+  display: none;
+}
+
+.piece__frame.is-waiting .piece__state,
+.piece__frame.is-original .piece__state,
+.piece__frame.is-failed .piece__state {
+  display: block;
+}
+
+.piece__frame.is-failed .piece__state {
+  background: var(--color-broken);
+  color: #fff;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.piece__looks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.piece--chain .piece__looks {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.look {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+}
+
+.look__thumb {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--color-border);
+  opacity: 0.35;
+  transition: opacity 0.2s;
+}
+
+.look.is-made .look__thumb {
+  opacity: 1;
+}
+
+.look:hover .look__thumb {
+  border-color: var(--color-border-strong);
+}
+
+.look[aria-pressed="true"] {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.look[aria-pressed="true"] .look__thumb {
+  border-color: var(--color-text);
+  box-shadow: -3px 0 0 var(--split-c), 3px 0 0 var(--split-m);
+}
+
+.look:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 3px;
+}
+
+.piece__text {
+  position: sticky;
+  top: 1.25rem;
+  max-width: 30rem;
+}
+
+.piece__index b {
+  color: var(--color-text);
+}
+
+.piece__title {
+  margin-top: 0.35rem;
+  font-size: clamp(1.9rem, 3.6vw, 2.9rem);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+
+.piece--chain .piece__title {
+  font-size: clamp(1.5rem, 2.8vw, 2.1rem);
+}
+
+.piece__line {
+  margin-top: 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-magenta);
+}
+
+.piece--chain .piece__line {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-cyan);
+}
+
+.piece__how {
+  margin-top: 0.9rem;
+}
+
+.piece__look {
+  margin-top: 1.4rem;
+  padding: 0.9rem 0 0.2rem 1rem;
+  border-left: 2px solid var(--color-text);
+}
+
+.piece__look-name {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.piece__note {
+  margin-top: 0.3rem;
+  font-size: 0.94rem;
+}
+
+.piece__recipe,
+.piece__meta {
+  margin-top: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.piece__recipe {
+  color: var(--color-text);
+}
+
+.piece__meta {
+  margin-top: 0.25rem;
+  min-height: 1.5em;
+}
+
+.piece__actions,
+.outro__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.piece__actions .btn,
+.outro__actions .btn,
+.hero__actions .btn {
+  text-decoration: none;
+  white-space: normal;
+  text-align: center;
+}
+
+.btn[aria-busy="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.btn--secondary[aria-pressed="true"] {
+  border-color: var(--color-text);
+  box-shadow: inset 0 0 0 1px var(--color-text);
+}
+
+/* ─── Between and after ─────────────────────────────────────────────────── */
+
+.interlude,
+.outro {
+  padding-block: clamp(2.5rem, 6vw, 4.5rem) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.interlude__title {
+  margin-block: 0.5rem 0.9rem;
+  font-size: clamp(1.9rem, 4.2vw, 3.2rem);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+
+.interlude__lead {
+  max-width: 44rem;
+  font-size: 1.08rem;
+}
+
+.outro__credit {
+  max-width: 44rem;
+  margin-top: 2.5rem;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+body.is-dropping .hero__frame {
+  outline: 3px dashed var(--color-cyan);
+  outline-offset: 6px;
+}
+
+/* ─── Narrow screens ────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .hero,
+  .piece,
+  .piece:nth-child(even) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero__picture {
+    order: -1;
+  }
+
+  .piece:nth-child(even) .piece__picture {
+    order: 0;
+  }
+
+  .piece__text {
+    position: static;
+    max-width: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .hero__name {
+    display: none;
+  }
+
+  .hero__strip {
+    padding: 0.35rem 0.15rem;
+    font-size: 0.6rem;
+    align-items: center;
+  }
+
+  .piece__looks {
+    gap: 0.4rem;
+  }
+
+  .look {
+    font-size: 0.7rem;
+  }
+}

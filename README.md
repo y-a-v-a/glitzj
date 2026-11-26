@@ -2,7 +2,7 @@
 
 A workshop for breaking images on purpose, running entirely in your browser. Nothing is uploaded; your photos never leave your machine.
 
-**Try it at [y-a-v-a.github.io/glitzj](https://y-a-v-a.github.io/glitzj/).**
+**Try it at [y-a-v-a.github.io/glitzj](https://y-a-v-a.github.io/glitzj/)**, or look first: the [showcase](https://y-a-v-a.github.io/glitzj/showcase.html) puts one photo of two parrots through all ten tools, live in your browser.
 
 ![Glitzj with a portrait photo on the left and its glitched version on the right, using the Static strategy and the Paeth filter](docs/screenshot.png)
 
@@ -32,6 +32,7 @@ Before any of that you can turn, mirror and zoom the original, which changes wha
 
 ## Read more
 
+- [**Showcase**](https://y-a-v-a.github.io/glitzj/showcase.html): forty results and three chains, each one click away from the tool and settings that made it.
 - [**Guide**](docs/GUIDE.md): what every tool does and what every control is for, plus the limits on file size.
 - [**Spec**](docs/SPEC.md): how it is built, pipeline by pipeline.
 

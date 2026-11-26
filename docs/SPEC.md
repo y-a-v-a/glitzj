@@ -444,6 +444,17 @@ The vectors and the correction are cached per motion settings, and the run is ke
 
 Hash: `#m=spin&strength=-60&dir=180&block=32&size=640&fix=20&s=3&f=40`. The other picture is not part of the link. The export is named `<original>_mosh_<motion>_<strength>[_dir<n>]_b<block>_f<frames>[_fix<n>][_s<seed>].png`; a recording gets the same name as a video file. On a 768 × 512 test photo Play ran at 21 frames a second in Chrome.
 
+## Showcase page
+
+`showcase.html` presents the tools on one photo (`webapp/showcase/parrots.jpg`, picture 23 of the Kodak test suite, 768 × 512). It stores no results. It holds recipes and carries them out with the tools' own modules, which all load into the one page.
+
+- `showcase-data.js` is the content and touches no page: for every tool its page, its starting settings and the short names its page uses in the address; ten exhibits of four looks, each look a tool and its settings; three chains of three steps. `showcaseHash` writes a recipe as the tool's page writes its address (only what differs from the defaults), so a recipe is also a link.
+- `showcase.js` carries recipes out one at a time, in slices of 12 ms like the tool pages, as each piece comes within 600 px of the screen. The first look of every exhibit is made first, for the strip at the top. Every look is made once for its small picture; only the chosen look keeps its result at full size, and a look chosen later is made again. In a chain every step keeps its result, since the next step works on it.
+- A tool that makes a file (Glitch, GIF dither, JPEG crush, JPEG surgery) shows the file as the browser decodes it. A glitch the browser cannot open is tried with the next seed, up to 20 times, as Auto-retry does; the link then carries the seed that worked.
+- **Open this in …** stores the picture the recipe works on through the hand-off (`handoff.js`) and then goes to the tool's page with the recipe in the address. For the photo that picture is the JPEG file itself, so the Glitch page damages the same bytes. For a chain step it is the result of the step before: the file if that step made one, else a PNG of its pixels, which is what Feed back makes.
+- A visitor's own picture is scaled to at most 1024 px on its longest side, flattened on white and saved as a JPEG at quality 0.92; its pixels are then read back from that JPEG, so the page and the tools it opens work on the same picture.
+- Without a web server (`file://`) the photo cannot be read; the page then asks for a picture of your own.
+
 ## Iteration / validity
 
 ### Marker protection
@@ -518,5 +529,7 @@ A JPEG that ends without an `EOI` marker (a common result of truncated downloads
 - Export (`export.test.js`): the default saves the result itself under its old name; sizes keep the shape; when a copy is rendered and in which format; the limits; names; remembered options are checked.
 
 - JPEG surgery (`surgery.test.js`), with the independent decoder of the crush tests (shared from `test/helpers/`): without cuts or lies the bytes equal JPEG crush's; every cut read back from the file; the header lies; a claimed size never asks for more blocks than the file holds, at every pair of real and claimed sampling; shared Huffman tables when the layout is lied about.
+
+- Showcase (`showcase.test.js`): an exhibit for every tool page in menu order; the short address names against the page scripts themselves; the GIF dither defaults against its page; every recipe names only settings and choices its tool has; the address and the recipe in words; every recipe can be carried out and changes the picture. In Chrome, all 49 recipes opened in their tool's page gave back exactly the settings of the recipe.
 
 If needed in a later version, larger files can be handled by moving manipulation to a Web Worker, but this is out of scope for now.

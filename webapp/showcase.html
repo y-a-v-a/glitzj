@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Glitzj Showcase</title>
+  <meta name="description" content="One photo of two parrots, broken ten ways: every picture on this page is made in your browser by the Glitzj tools themselves.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23101014'/%3E%3Crect x='6' y='8' width='20' height='4' fill='%2300e5ff'/%3E%3Crect x='9' y='14' width='20' height='4' fill='%23ff2e88'/%3E%3Crect x='4' y='20' width='16' height='4' fill='%23f2f2f5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="showcase.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <h1 class="site-title" data-text="glitzj">glitzj</h1>
+      <p class="site-tagline">it looks broken. is it?</p>
+    </div>
+    <nav class="site-nav" aria-label="Modes">
+      <a class="site-nav__link" href="index.html">Glitch</a>
+      <a class="site-nav__link" href="gif.html">GIF dither</a>
+      <a class="site-nav__link" href="crush.html">JPEG crush</a>
+      <a class="site-nav__link" href="surgery.html">JPEG surgery</a>
+      <a class="site-nav__link" href="split.html">Split</a>
+      <a class="site-nav__link" href="sort.html">Sort</a>
+      <a class="site-nav__link" href="bend.html">Bend</a>
+      <a class="site-nav__link" href="misread.html">Misread</a>
+      <a class="site-nav__link" href="signal.html">Signal</a>
+      <a class="site-nav__link" href="mosh.html">Mosh</a>
+      <a class="site-nav__link site-nav__link--showcase" href="showcase.html" aria-current="page">Showcase</a>
+    </nav>
+    <ul class="site-badges" aria-label="About this page">
+      <li class="badge"><span class="badge__dot" aria-hidden="true"></span>Made live in your browser, nothing is uploaded</li>
+    </ul>
+  </header>
+
+  <main class="showcase">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__words">
+        <p class="hero__kicker">Showcase</p>
+        <h2 class="hero__title" id="hero-title">
+          <span>A parrot talks.</span>
+          <span class="hero__ask" data-text="Is it talking?">Is it talking?</span>
+        </h2>
+        <p class="hero__lead">Glitzj breaks pictures. Are they broken? Every picture on this page is one photo of two parrots, put through one of ten tools. They look ruined. They are not: the files open in any viewer, and each tool is a real mechanism that did exactly what it was told. It was just told the wrong thing.</p>
+        <p class="hero__lead hero__lead--small">Nothing here is a stored image. Your browser is making all of it right now, with the same code as the tools. Point at a strip to see one tool's whole picture, or pick it to read how.</p>
+        <div class="hero__actions">
+          <button class="btn btn--primary" type="button" id="btn-own">Try it on your own picture</button>
+          <button class="btn btn--secondary" type="button" id="btn-parrots">Back to the parrots</button>
+          <input type="file" id="file-input" accept="image/*" hidden>
+        </div>
+        <p class="hero__using">Now showing: <span id="picture-name">two parrots</span></p>
+        <p class="error" id="notice" role="alert" hidden></p>
+      </div>
+
+      <div class="hero__picture">
+        <div class="hero__frame">
+          <canvas class="hero__canvas" id="hero-canvas" role="img" aria-label="The photo cut into ten strips, each made by another tool"></canvas>
+          <nav class="hero__strips" id="hero-strips" aria-label="The ten tools"></nav>
+        </div>
+      </div>
+    </section>
+
+    <div class="pieces" id="exhibits"></div>
+
+    <section class="interlude" aria-labelledby="chains-title">
+      <p class="hero__kicker">From tool to tool</p>
+      <h2 class="interlude__title" id="chains-title">Then break what you broke</h2>
+      <p class="interlude__lead">Every result can be fed back in as a new source, on the same page or the next one. Three chains of three tools follow. Pick a step to see what it made, and open it in its tool to carry on from there.</p>
+    </section>
+
+    <div class="pieces" id="chains"></div>
+
+    <section class="outro">
+      <h2 class="interlude__title">So, are they broken?</h2>
+      <p class="interlude__lead">A parrot repeats the sounds and leaves the meaning out. These tools do the opposite. The sorting algorithm sorted, the television received, the decoder decoded, each to the letter, and none of them was asked whether the picture still made sense. What you see is not damage. It is obedience.</p>
+      <p class="outro__actions">
+        <a class="btn btn--primary" href="index.html">Start breaking</a>
+        <a class="btn btn--secondary" href="#hero-title">Back to the top</a>
+      </p>
+      <p class="outro__credit">The parrots are picture 23 of the Kodak Lossless True Color Image Suite, a set of test photos that people who build image compression have been taking apart since the 1990s. Few parrots have been compressed more often.</p>
+    </section>
+  </main>
+
+  <script src="handoff.js"></script>
+  <script src="pixels.js"></script>
+  <script src="jpeg.js"></script>
+  <script src="png.js"></script>
+  <script src="gif.js"></script>
+  <script src="strategies.js"></script>
+  <script src="dither.js"></script>
+  <script src="crush.js"></script>
+  <script src="surgery.js"></script>
+  <script src="split.js"></script>
+  <script src="sort.js"></script>
+  <script src="bend.js"></script>
+  <script src="misread.js"></script>
+  <script src="signal.js"></script>
+  <script src="mosh.js"></script>
+  <script src="showcase-data.js"></script>
+  <script src="showcase.js"></script>
+</body>
+</html>

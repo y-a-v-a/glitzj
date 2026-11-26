@@ -194,3 +194,10 @@
 - [x] `export.js`: size, scaling, format and quality options on every Export button, remembered; rendered copies of file results; Copy and Share
 - [x] Node tests for the view arithmetic and the export plan
 
+## Phase 22: Showcase page
+
+- [x] `showcase-data.js`: forty looks and three chains as recipes, and a recipe written as a tool's address
+- [x] `showcase.js`: recipes carried out live with the tools' own modules, lazily and in slices; the strip of ten at the top; looks, original, chains
+- [x] Open a recipe in its tool through the hand-off; run the page on a visitor's own picture
+- [x] Showcase link in the menu of every page
+- [x] Node tests that hold the recipes to the tools
