@@ -285,6 +285,7 @@ const hero = {
   reset() {
     this.results = [];
     this.shown = -1;
+    for (const strip of this.strips.children) strip.classList.remove('is-made');
     this.canvas.width = source.width;
     this.canvas.height = source.height;
     this.draw();
